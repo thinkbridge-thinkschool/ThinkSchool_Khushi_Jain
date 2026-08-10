@@ -13,7 +13,8 @@ public class OrderServiceTests
     {
         var repository = new Mock<IOrderRepository>();
         var logger = Mock.Of<ILogger<OrderService>>();
-        var service = new OrderService(repository.Object, logger);
+        var rules = new List<IOrderRule> { new DefaultOrderRules() };
+        var service = new OrderService(repository.Object, logger, rules);
 
         var result = await service.CreateOrderAsync(new OrderRequest
         {
@@ -37,7 +38,8 @@ public class OrderServiceTests
         repository.Setup(x => x.GetLatestOrderAsync(It.IsAny<CancellationToken>())).ReturnsAsync((Order?)null);
 
         var logger = Mock.Of<ILogger<OrderService>>();
-        var service = new OrderService(repository.Object, logger);
+        var rules = new List<IOrderRule> { new DefaultOrderRules() };
+        var service = new OrderService(repository.Object, logger, rules);
 
         var result = await service.CreateOrderAsync(new OrderRequest
         {
@@ -66,7 +68,8 @@ public class OrderServiceTests
         repository.Setup(x => x.GetLatestOrderAsync(It.IsAny<CancellationToken>())).ReturnsAsync((Order?)null);
 
         var logger = Mock.Of<ILogger<OrderService>>();
-        var service = new OrderService(repository.Object, logger);
+        var rules = new List<IOrderRule> { new DefaultOrderRules() };
+        var service = new OrderService(repository.Object, logger, rules);
 
         var items = new List<OrderItemRequest>
         {

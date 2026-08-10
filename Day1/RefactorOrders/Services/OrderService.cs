@@ -8,11 +8,13 @@ public class OrderService : IOrderService
 {
     private readonly IOrderRepository _repository;
     private readonly ILogger<OrderService> _logger;
+    private readonly IEnumerable<IOrderRule> _rules;
 
-    public OrderService(IOrderRepository repository, ILogger<OrderService> logger)
+    public OrderService(IOrderRepository repository, ILogger<OrderService> logger, IEnumerable<IOrderRule> rules)
     {
         _repository = repository;
         _logger = logger;
+        _rules = rules;
     }
 
     public async Task<OrderProcessingResult> CreateOrderAsync(OrderRequest request, CancellationToken cancellationToken)
@@ -138,20 +140,32 @@ public class OrderService : IOrderService
 
         var total = subtotal + shipping + totalTax - discount;
 
-        if (customerTier == "vip")
+        var context = new OrderProcessingContext
         {
-            total = total - 10m;
+            CustomerName = request.CustomerName,
+            CustomerNotes = request.CustomerNotes,
+            CouponCode = request.CouponCode,
+            ExpressShipping = request.ExpressShipping,
+            Subtotal = subtotal,
+            TotalTax = totalTax,
+            Shipping = shipping,
+            Discount = discount,
+            Total = total,
+            LineCount = lineCount,
+            ShouldReview = shouldReview,
+            CustomerTier = customerTier,
+            PriorityCode = priorityCode,
+            RegionCode = regionCode,
+            WarehouseHint = warehouseHint,
+            LegacyNote = legacyNote
+        };
+
+        foreach (var rule in _rules)
+        {
+            rule.Apply(context);
         }
 
-        if (shouldReview)
-        {
-            total = total + 2.5m;
-        }
-
-        if (lineCount > 3)
-        {
-            total = total + 5m;
-        }
+        total = context.Total;
 
         var order = new Order
         {

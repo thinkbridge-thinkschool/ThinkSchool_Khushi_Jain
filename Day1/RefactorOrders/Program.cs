@@ -13,6 +13,7 @@ builder.Services.AddLogging();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseInMemoryDatabase("OrdersDb"));
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+builder.Services.AddScoped<IOrderRule, DefaultOrderRules>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 
 var app = builder.Build();
