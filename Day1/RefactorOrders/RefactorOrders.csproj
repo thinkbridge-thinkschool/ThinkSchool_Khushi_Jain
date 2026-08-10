@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.10" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Original/**/*.cs" />
+    <Compile Remove="RefactorOrders.Tests/**/*.cs" />
+    <Content Remove="RefactorOrders.Tests/**" />
+    <EmbeddedResource Remove="RefactorOrders.Tests/**" />
+    <None Remove="RefactorOrders.Tests/**" />
+  </ItemGroup>
+
+</Project>
