@@ -12,6 +12,7 @@ builder.Services.AddDbContext<QuotesDbContext>(options =>
     options.UseSqlite("Data Source=quotes.db"));
 
 builder.Services.AddScoped<IQuoteRepository, QuoteRepository>();
+builder.Services.AddScoped<ICollectionRepository, CollectionRepository>();
 
 var app = builder.Build();
 
@@ -42,6 +43,7 @@ using (var scope = app.Services.CreateScope())
 }
 
 MapQuoteEndpoints(app);
+MapCollectionEndpoints(app);
 
 app.Run();
 
@@ -148,4 +150,108 @@ static Dictionary<string, string[]> Validate(CreateQuoteRequest request)
         errors["text"] = ["Text must be 500 characters or fewer."];
 
     return errors;
+}
+static void MapCollectionEndpoints(WebApplication app)
+{
+    var group = app.MapGroup("/api/collections");
+
+    group.MapPost("/", async (
+        CreateCollectionRequest request,
+        ICollectionRepository repository,
+        CancellationToken cancellationToken) =>
+    {
+        var collection = new Collection(
+            request.Name ?? string.Empty,
+            request.OwnerId);
+
+        await repository.AddAsync(
+            collection,
+            cancellationToken);
+
+        return Results.Created(
+            $"/api/collections/{collection.Id}",
+            collection);
+    });
+
+    group.MapGet("/{id:int}", async (
+        int id,
+        ICollectionRepository repository,
+        CancellationToken cancellationToken) =>
+    {
+        var collection = await repository.GetByIdAsync(
+            id,
+            cancellationToken);
+
+        return collection is null
+            ? Results.NotFound()
+            : Results.Ok(collection);
+    });
+
+    group.MapPost("/{id:int}/items", async (
+        int id,
+        AddCollectionItemRequest request,
+        ICollectionRepository repository,
+        CancellationToken cancellationToken) =>
+    {
+        var collection = await repository.GetByIdAsync(
+            id,
+            cancellationToken);
+
+        if (collection is null)
+            return Results.NotFound();
+
+        try
+{
+    collection.AddItem(request.QuoteId);
+
+    await repository.UpdateAsync(
+        collection,
+        cancellationToken);
+
+    return Results.Ok(collection);
+}
+catch (CollectionInvariantException ex)
+{
+    return Results.Problem(
+        statusCode: StatusCodes.Status400BadRequest,
+        title: "Collection invariant violated",
+        detail: ex.Message);
+}
+    });
+
+    group.MapDelete("/{id:int}/items/{quoteId:int}", async (
+        int id,
+        int quoteId,
+        ICollectionRepository repository,
+        CancellationToken cancellationToken) =>
+    {
+        var collection = await repository.GetByIdAsync(
+            id,
+            cancellationToken);
+
+        if (collection is null)
+            return Results.NotFound();
+
+        collection.RemoveItem(quoteId);
+
+        await repository.UpdateAsync(
+            collection,
+            cancellationToken);
+
+        return Results.Ok(collection);
+    });
+
+    group.MapDelete("/{id:int}", async (
+        int id,
+        ICollectionRepository repository,
+        CancellationToken cancellationToken) =>
+    {
+        var deleted = await repository.DeleteAsync(
+            id,
+            cancellationToken);
+
+        return deleted
+            ? Results.NoContent()
+            : Results.NotFound();
+    });
 }
