@@ -22,10 +22,10 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore RefactorOrders.csproj
+        run: dotnet restore Day1/RefactorOrders/RefactorOrders.csproj
 
       - name: Build RefactorOrders
-        run: dotnet build RefactorOrders.csproj --no-restore
+        run: dotnet build Day1/RefactorOrders/RefactorOrders.csproj --no-restore
 
       - name: Run tests
-        run: dotnet test RefactorOrders.Tests/RefactorOrders.Tests.csproj --no-build
+        run: dotnet test Day1/RefactorOrders/RefactorOrders.Tests/RefactorOrders.Tests.csproj --no-buildśś
