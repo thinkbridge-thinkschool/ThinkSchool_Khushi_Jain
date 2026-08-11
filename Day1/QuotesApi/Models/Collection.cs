@@ -1,3 +1,5 @@
+using QuotesApi.Services;
+
 namespace QuotesApi.Models;
 
 public sealed class Collection
@@ -35,7 +37,7 @@ public sealed class Collection
 
     public IReadOnlyCollection<CollectionItem> Items => _items.AsReadOnly();
 
-    public void AddItem(int quoteId)
+    public void AddItem(int quoteId, IClock clock)
     {
         if (quoteId <= 0)
             throw new CollectionInvariantException(
@@ -52,7 +54,7 @@ public sealed class Collection
         _items.Add(
             new CollectionItem(
                 quoteId,
-                DateTimeOffset.UtcNow));
+                clock.UtcNow));
     }
 
     public void RemoveItem(int quoteId)

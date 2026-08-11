@@ -3,6 +3,7 @@ using QuotesApi.Contracts;
 using QuotesApi.Data;
 using QuotesApi.Models;
 using QuotesApi.Repositories;
+using QuotesApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +14,7 @@ builder.Services.AddDbContext<QuotesDbContext>(options =>
 
 builder.Services.AddScoped<IQuoteRepository, QuoteRepository>();
 builder.Services.AddScoped<ICollectionRepository, CollectionRepository>();
+builder.Services.AddSingleton<IClock, SystemClock>();
 
 var app = builder.Build();
 
@@ -191,6 +193,7 @@ static void MapCollectionEndpoints(WebApplication app)
         int id,
         AddCollectionItemRequest request,
         ICollectionRepository repository,
+        IClock clock,
         CancellationToken cancellationToken) =>
     {
         var collection = await repository.GetByIdAsync(
@@ -202,7 +205,7 @@ static void MapCollectionEndpoints(WebApplication app)
 
         try
 {
-    collection.AddItem(request.QuoteId);
+    collection.AddItem(request.QuoteId, clock);
 
     await repository.UpdateAsync(
         collection,
