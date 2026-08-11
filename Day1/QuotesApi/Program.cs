@@ -20,20 +20,28 @@ var jwtSettings = builder.Configuration
     ?? throw new InvalidOperationException("JWT configuration is missing.");
 
 var keyBytes = Encoding.UTF8.GetBytes(jwtSettings.Key);
-if (keyBytes.Length < 32)
-    throw new InvalidOperationException("JWT key must be at least 256 bits.");
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+if (keyBytes.Length < 32)
+{
+    throw new InvalidOperationException(
+        "JWT key must be at least 256 bits.");
+}
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
             ValidIssuer = jwtSettings.Issuer,
+
             ValidateAudience = true,
             ValidAudience = jwtSettings.Audience,
+
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(keyBytes),
+
             ValidateLifetime = true,
             ClockSkew = TimeSpan.FromMinutes(1)
         };
@@ -42,7 +50,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 builder.Services.AddSingleton(jwtSettings);
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+var connectionString =
+    builder.Configuration.GetConnectionString("DefaultConnection")
     ?? "Data Source=quotes.db";
 
 builder.Services.AddDbContext<QuotesDbContext>(options =>
@@ -74,7 +83,9 @@ app.UseExceptionHandler(exceptionApp =>
 
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<QuotesDbContext>();
+    var db = scope.ServiceProvider
+        .GetRequiredService<QuotesDbContext>();
+
     await db.Database.MigrateAsync();
 
     if (!await db.Users.AnyAsync())
@@ -82,7 +93,8 @@ using (var scope = app.Services.CreateScope())
         db.Users.Add(new User
         {
             Email = "admin@example.com",
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("P@ssword1")
+            PasswordHash =
+                BCrypt.Net.BCrypt.HashPassword("P@ssword1")
         });
 
         await db.SaveChangesAsync();
@@ -112,14 +124,20 @@ static void MapQuoteEndpoints(WebApplication app)
 
         if (currentPage < 1 || pageSize is < 1 or > 100)
         {
-            return Results.ValidationProblem(new Dictionary<string, string[]>
-            {
-                ["page/size"] = ["Page must be >= 1 and size must be between 1 and 100."]
-            });
+            return Results.ValidationProblem(
+                new Dictionary<string, string[]>
+                {
+                    ["page/size"] =
+                    [
+                        "Page must be >= 1 and size must be between 1 and 100."
+                    ]
+                });
         }
 
         var result = await repository.GetPagedAsync(
-            currentPage, pageSize, cancellationToken);
+            currentPage,
+            pageSize,
+            cancellationToken);
 
         return Results.Ok(new
         {
@@ -135,7 +153,9 @@ static void MapQuoteEndpoints(WebApplication app)
         IQuoteRepository repository,
         CancellationToken cancellationToken) =>
     {
-        var quote = await repository.GetByIdAsync(id, cancellationToken);
+        var quote = await repository.GetByIdAsync(
+            id,
+            cancellationToken);
 
         return quote is null
             ? Results.NotFound()
@@ -152,7 +172,9 @@ static void MapQuoteEndpoints(WebApplication app)
 
         try
         {
-            quote = Quote.Create(request.Author, request.Text);
+            quote = Quote.Create(
+                request.Author,
+                request.Text);
         }
         catch (QuoteDomainException ex)
         {
@@ -166,9 +188,13 @@ static void MapQuoteEndpoints(WebApplication app)
             quote,
             cancellationToken);
 
-        logger.LogInformation("Created quote {QuoteId}", quote.Id);
+        logger.LogInformation(
+            "Created quote {QuoteId}",
+            quote.Id);
 
-        return Results.Created($"/api/quotes/{quote.Id}", quote);
+        return Results.Created(
+            $"/api/quotes/{quote.Id}",
+            quote);
     }).RequireAuthorization();
 
     group.MapDelete("/{id:int}", async (
@@ -177,19 +203,30 @@ static void MapQuoteEndpoints(WebApplication app)
         ILogger<Program> logger,
         CancellationToken cancellationToken) =>
     {
-        var deleted = await repository.DeleteAsync(id, cancellationToken);
+        var deleted = await repository.DeleteAsync(
+            id,
+            cancellationToken);
 
         if (!deleted)
+        {
             return Results.NotFound();
+        }
 
-        logger.LogInformation("Deleted quote {QuoteId}", id);
+        logger.LogInformation(
+            "Deleted quote {QuoteId}",
+            id);
 
-        return Results.NoContent();    }).RequireAuthorization();
+        return Results.NoContent();
+    }).RequireAuthorization();
 }
 
 static void MapAuthEndpoints(WebApplication app)
 {
     var authGroup = app.MapGroup("/api/auth");
+
+    // ---------------------------------------------------------
+    // LOGIN
+    // ---------------------------------------------------------
 
     authGroup.MapPost("/login", async (
         LoginRequest request,
@@ -199,38 +236,263 @@ static void MapAuthEndpoints(WebApplication app)
     {
         var user = await db.Users
             .AsNoTracking()
-            .FirstOrDefaultAsync(u => u.Email == request.Email, cancellationToken);
+            .FirstOrDefaultAsync(
+                u => u.Email == request.Email,
+                cancellationToken);
 
-        if (user is null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
-            return Results.Unauthorized();
-
-        var expiresIn = jwtSettings.AccessTokenMinutes * 60;
-        var claims = new[]
+        if (user is null ||
+            !BCrypt.Net.BCrypt.Verify(
+                request.Password,
+                user.PasswordHash))
         {
-            new Claim(JwtRegisteredClaimNames.Sub, user.Email),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            new Claim(JwtRegisteredClaimNames.Iss, jwtSettings.Issuer),
-            new Claim(JwtRegisteredClaimNames.Aud, jwtSettings.Audience)
+            return Results.Unauthorized();
+        }
+
+        var accessToken =
+            CreateAccessToken(user, jwtSettings);
+
+        var refreshToken =
+            GenerateRefreshToken();
+
+        var refreshTokenEntity = new RefreshToken
+        {
+            TokenHash =
+                HashRefreshToken(refreshToken),
+
+            UserId = user.Id,
+
+            ExpiresAt =
+                DateTimeOffset.UtcNow.AddDays(7),
+
+            FamilyId = Guid.NewGuid()
         };
 
-        var token = new JwtSecurityToken(
-            issuer: jwtSettings.Issuer,
-            audience: jwtSettings.Audience,
-            claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(jwtSettings.AccessTokenMinutes),
-            signingCredentials: new SigningCredentials(
-                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key)),
-                SecurityAlgorithms.HmacSha256));
+        db.RefreshTokens.Add(refreshTokenEntity);
 
-        var accessToken = new JwtSecurityTokenHandler().WriteToken(token);
-        var refreshToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
+        await db.SaveChangesAsync(cancellationToken);
 
         return Results.Ok(new
         {
             access_token = accessToken,
             refresh_token = refreshToken,
-            expires_in = expiresIn
+            expires_in =
+                jwtSettings.AccessTokenMinutes * 60
         });
+    });
+
+    // ---------------------------------------------------------
+    // REFRESH TOKEN ROTATION
+    // ---------------------------------------------------------
+
+    authGroup.MapPost("/refresh", async (
+        RefreshTokenRequest request,
+        QuotesDbContext db,
+        JwtSettings jwtSettings,
+        ILogger<Program> logger,
+        CancellationToken cancellationToken) =>
+    {
+        var tokenHash =
+            HashRefreshToken(request.RefreshToken);
+
+        var storedToken = await db.RefreshTokens
+            .Include(t => t.User)
+            .FirstOrDefaultAsync(
+                t => t.TokenHash == tokenHash,
+                cancellationToken);
+
+        // Token doesn't exist.
+        if (storedToken is null)
+        {
+            return Results.Unauthorized();
+        }
+
+        // -----------------------------------------------------
+        // REUSE DETECTION
+        // -----------------------------------------------------
+
+        if (storedToken.RevokedAt is not null)
+        {
+            logger.LogWarning(
+                "Refresh token reuse detected for user {UserId} and family {FamilyId}",
+                storedToken.UserId,
+                storedToken.FamilyId);
+
+            var familyTokens = await db.RefreshTokens
+                .Where(t =>
+                    t.FamilyId == storedToken.FamilyId)
+                .ToListAsync(cancellationToken);
+
+            foreach (var token in familyTokens)
+            {
+                token.RevokedAt ??=
+                    DateTimeOffset.UtcNow;
+            }
+
+            await db.SaveChangesAsync(
+                cancellationToken);
+
+            return Results.Unauthorized();
+        }
+
+        // -----------------------------------------------------
+        // EXPIRATION CHECK
+        // -----------------------------------------------------
+
+        if (storedToken.ExpiresAt <=
+            DateTimeOffset.UtcNow)
+        {
+            return Results.Unauthorized();
+        }
+
+        // -----------------------------------------------------
+        // ROTATE REFRESH TOKEN
+        // -----------------------------------------------------
+
+        var newRefreshToken =
+            GenerateRefreshToken();
+
+        var newRefreshTokenHash =
+            HashRefreshToken(newRefreshToken);
+
+        // Revoke old token.
+        storedToken.RevokedAt =
+            DateTimeOffset.UtcNow;
+
+        storedToken.ReplacedByTokenHash =
+            newRefreshTokenHash;
+
+        // Create replacement token in same family.
+        var replacement = new RefreshToken
+        {
+            TokenHash =
+                newRefreshTokenHash,
+
+            UserId =
+                storedToken.UserId,
+
+            ExpiresAt =
+                DateTimeOffset.UtcNow.AddDays(7),
+
+            FamilyId =
+                storedToken.FamilyId
+        };
+
+        db.RefreshTokens.Add(replacement);
+
+        // Create new access token.
+        var accessToken =
+            CreateAccessToken(
+                storedToken.User,
+                jwtSettings);
+
+        await db.SaveChangesAsync(
+            cancellationToken);
+
+        return Results.Ok(new
+        {
+            access_token = accessToken,
+            refresh_token = newRefreshToken,
+            expires_in =
+                jwtSettings.AccessTokenMinutes * 60
+        });
+    });
+
+    // ---------------------------------------------------------
+    // LOGOUT
+    // ---------------------------------------------------------
+
+    authGroup.MapPost("/logout", async (
+        RefreshTokenRequest request,
+        QuotesDbContext db,
+        CancellationToken cancellationToken) =>
+    {
+        var tokenHash =
+            HashRefreshToken(request.RefreshToken);
+
+        var storedToken = await db.RefreshTokens
+            .FirstOrDefaultAsync(
+                t => t.TokenHash == tokenHash,
+                cancellationToken);
+
+        // Logout is idempotent.
+        if (storedToken is null)
+        {
+            return Results.NoContent();
+        }
+
+        storedToken.RevokedAt ??=
+            DateTimeOffset.UtcNow;
+
+        await db.SaveChangesAsync(
+            cancellationToken);
+
+        return Results.NoContent();
     });
 }
 
+// =============================================================
+// JWT ACCESS TOKEN
+// =============================================================
+
+static string CreateAccessToken(
+    User user,
+    JwtSettings jwtSettings)
+{
+    var claims = new[]
+    {
+        new Claim(
+            JwtRegisteredClaimNames.Sub,
+            user.Email),
+
+        new Claim(
+            JwtRegisteredClaimNames.Jti,
+            Guid.NewGuid().ToString()),
+
+        new Claim(
+            JwtRegisteredClaimNames.Iss,
+            jwtSettings.Issuer),
+
+        new Claim(
+            JwtRegisteredClaimNames.Aud,
+            jwtSettings.Audience)
+    };
+
+    var token = new JwtSecurityToken(
+        issuer: jwtSettings.Issuer,
+        audience: jwtSettings.Audience,
+        claims: claims,
+        expires:
+            DateTime.UtcNow.AddMinutes(
+                jwtSettings.AccessTokenMinutes),
+        signingCredentials:
+            new SigningCredentials(
+                new SymmetricSecurityKey(
+                    Encoding.UTF8.GetBytes(
+                        jwtSettings.Key)),
+                SecurityAlgorithms.HmacSha256));
+
+    return new JwtSecurityTokenHandler()
+        .WriteToken(token);
+}
+
+// =============================================================
+// REFRESH TOKEN GENERATION
+// =============================================================
+
+static string GenerateRefreshToken()
+{
+    return Convert.ToBase64String(
+        RandomNumberGenerator.GetBytes(64));
+}
+
+// =============================================================
+// REFRESH TOKEN HASHING
+// =============================================================
+
+static string HashRefreshToken(string token)
+{
+    var hash = SHA256.HashData(
+        Encoding.UTF8.GetBytes(token));
+
+    return Convert.ToHexString(hash);
+}
