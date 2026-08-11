@@ -96,17 +96,22 @@ static void MapQuoteEndpoints(WebApplication app)
         ILogger<Program> logger,
         CancellationToken cancellationToken) =>
     {
-        var errors = Validate(request);
+        Quote quote;
 
-        if (errors.Count > 0)
-            return Results.ValidationProblem(errors);
+        try
+        {
+            quote = Quote.Create(request.Author, request.Text);
+        }
+        catch (QuoteDomainException ex)
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Quote validation failed",
+                detail: ex.Message);
+        }
 
-        var quote = await repository.AddAsync(
-            new Quote
-            {
-                Author = request.Author.Trim(),
-                Text = request.Text.Trim()
-            },
+        quote = await repository.AddAsync(
+            quote,
             cancellationToken);
 
         logger.LogInformation("Created quote {QuoteId}", quote.Id);

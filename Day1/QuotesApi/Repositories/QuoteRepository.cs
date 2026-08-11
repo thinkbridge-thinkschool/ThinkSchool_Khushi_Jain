@@ -12,6 +12,7 @@ public class QuoteRepository(QuotesDbContext db) : IQuoteRepository
         CancellationToken cancellationToken)
     {
         var query = db.Quotes
+            .Where(q => !q.IsDeleted)
             .AsNoTracking()
             .OrderBy(q => q.Id);
 
@@ -28,8 +29,8 @@ public class QuoteRepository(QuotesDbContext db) : IQuoteRepository
     public Task<Quote?> GetByIdAsync(
         int id,
         CancellationToken cancellationToken) =>
-        db.Quotes
-            .AsNoTracking()
+            db.Quotes
+            .Where(q => !q.IsDeleted)
             .FirstOrDefaultAsync(q => q.Id == id, cancellationToken);
 
     public async Task<Quote> AddAsync(
@@ -46,12 +47,14 @@ public class QuoteRepository(QuotesDbContext db) : IQuoteRepository
         CancellationToken cancellationToken)
     {
         var quote = await db.Quotes
+            .Where(q => !q.IsDeleted)
             .FirstOrDefaultAsync(q => q.Id == id, cancellationToken);
 
         if (quote is null)
             return false;
 
-        db.Quotes.Remove(quote);
+        quote.SoftDelete();
+
         await db.SaveChangesAsync(cancellationToken);
 
         return true;
