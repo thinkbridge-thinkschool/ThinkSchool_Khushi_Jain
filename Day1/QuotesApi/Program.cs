@@ -1,4 +1,10 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using QuotesApi.Contracts;
 using QuotesApi.Data;
 using QuotesApi.Models;
@@ -8,8 +14,39 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddProblemDetails();
 
+var jwtSettings = builder.Configuration
+    .GetSection("Jwt")
+    .Get<JwtSettings>()
+    ?? throw new InvalidOperationException("JWT configuration is missing.");
+
+var keyBytes = Encoding.UTF8.GetBytes(jwtSettings.Key);
+if (keyBytes.Length < 32)
+    throw new InvalidOperationException("JWT key must be at least 256 bits.");
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwtSettings.Issuer,
+            ValidateAudience = true,
+            ValidAudience = jwtSettings.Audience,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(keyBytes),
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromMinutes(1)
+        };
+    });
+
+builder.Services.AddAuthorization();
+builder.Services.AddSingleton(jwtSettings);
+
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? "Data Source=quotes.db";
+
 builder.Services.AddDbContext<QuotesDbContext>(options =>
-    options.UseSqlite("Data Source=quotes.db"));
+    options.UseSqlite(connectionString));
 
 builder.Services.AddScoped<IQuoteRepository, QuoteRepository>();
 
@@ -39,8 +76,23 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<QuotesDbContext>();
     await db.Database.MigrateAsync();
+
+    if (!await db.Users.AnyAsync())
+    {
+        db.Users.Add(new User
+        {
+            Email = "admin@example.com",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("P@ssword1")
+        });
+
+        await db.SaveChangesAsync();
+    }
 }
 
+app.UseAuthentication();
+app.UseAuthorization();
+
+MapAuthEndpoints(app);
 MapQuoteEndpoints(app);
 
 app.Run();
@@ -96,23 +148,28 @@ static void MapQuoteEndpoints(WebApplication app)
         ILogger<Program> logger,
         CancellationToken cancellationToken) =>
     {
-        var errors = Validate(request);
+        Quote quote;
 
-        if (errors.Count > 0)
-            return Results.ValidationProblem(errors);
+        try
+        {
+            quote = Quote.Create(request.Author, request.Text);
+        }
+        catch (QuoteDomainException ex)
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Quote validation failed",
+                detail: ex.Message);
+        }
 
-        var quote = await repository.AddAsync(
-            new Quote
-            {
-                Author = request.Author.Trim(),
-                Text = request.Text.Trim()
-            },
+        quote = await repository.AddAsync(
+            quote,
             cancellationToken);
 
         logger.LogInformation("Created quote {QuoteId}", quote.Id);
 
         return Results.Created($"/api/quotes/{quote.Id}", quote);
-    });
+    }).RequireAuthorization();
 
     group.MapDelete("/{id:int}", async (
         int id,
@@ -127,25 +184,53 @@ static void MapQuoteEndpoints(WebApplication app)
 
         logger.LogInformation("Deleted quote {QuoteId}", id);
 
-        return Results.NoContent();
+        return Results.NoContent();    }).RequireAuthorization();
+}
+
+static void MapAuthEndpoints(WebApplication app)
+{
+    var authGroup = app.MapGroup("/api/auth");
+
+    authGroup.MapPost("/login", async (
+        LoginRequest request,
+        QuotesDbContext db,
+        JwtSettings jwtSettings,
+        CancellationToken cancellationToken) =>
+    {
+        var user = await db.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Email == request.Email, cancellationToken);
+
+        if (user is null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+            return Results.Unauthorized();
+
+        var expiresIn = jwtSettings.AccessTokenMinutes * 60;
+        var claims = new[]
+        {
+            new Claim(JwtRegisteredClaimNames.Sub, user.Email),
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new Claim(JwtRegisteredClaimNames.Iss, jwtSettings.Issuer),
+            new Claim(JwtRegisteredClaimNames.Aud, jwtSettings.Audience)
+        };
+
+        var token = new JwtSecurityToken(
+            issuer: jwtSettings.Issuer,
+            audience: jwtSettings.Audience,
+            claims: claims,
+            expires: DateTime.UtcNow.AddMinutes(jwtSettings.AccessTokenMinutes),
+            signingCredentials: new SigningCredentials(
+                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key)),
+                SecurityAlgorithms.HmacSha256));
+
+        var accessToken = new JwtSecurityTokenHandler().WriteToken(token);
+        var refreshToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
+
+        return Results.Ok(new
+        {
+            access_token = accessToken,
+            refresh_token = refreshToken,
+            expires_in = expiresIn
+        });
     });
 }
 
-static Dictionary<string, string[]> Validate(CreateQuoteRequest request)
-{
-    var errors = new Dictionary<string, string[]>();
-
-    if (string.IsNullOrWhiteSpace(request.Author))
-        errors["author"] = ["Author is required."];
-
-    if (string.IsNullOrWhiteSpace(request.Text))
-        errors["text"] = ["Text is required."];
-
-    if (request.Author?.Length > 100)
-        errors["author"] = ["Author must be 100 characters or fewer."];
-
-    if (request.Text?.Length > 500)
-        errors["text"] = ["Text must be 500 characters or fewer."];
-
-    return errors;
-}
