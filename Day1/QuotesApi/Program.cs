@@ -14,6 +14,7 @@ builder.Services.AddDbContext<QuotesDbContext>(options =>
 
 builder.Services.AddScoped<IQuoteRepository, QuoteRepository>();
 builder.Services.AddScoped<ICollectionRepository, CollectionRepository>();
+builder.Services.AddScoped<ICollectionService, CollectionService>();
 builder.Services.AddSingleton<IClock, SystemClock>();
 
 var app = builder.Build();
@@ -192,34 +193,27 @@ static void MapCollectionEndpoints(WebApplication app)
     group.MapPost("/{id:int}/items", async (
         int id,
         AddCollectionItemRequest request,
-        ICollectionRepository repository,
-        IClock clock,
+        ICollectionService service,
         CancellationToken cancellationToken) =>
     {
-        var collection = await repository.GetByIdAsync(
-            id,
-            cancellationToken);
-
-        if (collection is null)
-            return Results.NotFound();
-
         try
-{
-    collection.AddItem(request.QuoteId, clock);
+        {
+            var collection = await service.AddItemAsync(
+                id,
+                request.QuoteId,
+                cancellationToken);
 
-    await repository.UpdateAsync(
-        collection,
-        cancellationToken);
-
-    return Results.Ok(collection);
-}
-catch (CollectionInvariantException ex)
-{
-    return Results.Problem(
-        statusCode: StatusCodes.Status400BadRequest,
-        title: "Collection invariant violated",
-        detail: ex.Message);
-}
+            return collection is null
+                ? Results.NotFound()
+                : Results.Ok(collection);
+        }
+        catch (CollectionInvariantException ex)
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Collection invariant violated",
+                detail: ex.Message);
+        }
     });
 
     group.MapDelete("/{id:int}/items/{quoteId:int}", async (
@@ -257,4 +251,7 @@ catch (CollectionInvariantException ex)
             ? Results.NoContent()
             : Results.NotFound();
     });
+}
+public partial class Program
+{
 }
