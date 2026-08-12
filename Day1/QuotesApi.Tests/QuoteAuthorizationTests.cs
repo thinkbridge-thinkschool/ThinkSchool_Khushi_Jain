@@ -81,6 +81,23 @@ public sealed class QuoteAuthorizationTests : IAsyncLifetime
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
+    [Fact]
+    public async Task Delete_WithExpiredToken_ReturnsUnauthorized()
+    {
+        var quoteId = await CreateQuoteAsAsync("owner@example.com");
+
+        AuthorizeAs(
+            "owner@example.com",
+            "quotes.write",
+            DateTime.UtcNow.AddMinutes(-5));
+
+        var response = await _client.DeleteAsync(
+            $"/api/quotes/{quoteId}");
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            response.StatusCode);
+    }
 
     [Fact]
     public async Task Delete_WithWriteScopeButNotOwner_ReturnsForbidden()
@@ -106,10 +123,14 @@ public sealed class QuoteAuthorizationTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     }
 
-    private void AuthorizeAs(string subject, string? scope) =>
+    private void AuthorizeAs(
+        string subject,
+        string? scope,
+        DateTime? expiresAt = null) =>
         _client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", CreateInternalJwt(subject, scope));
-
+            new AuthenticationHeaderValue(
+                "Bearer",
+                CreateInternalJwt(subject, scope, expiresAt));
     private async Task<int> CreateQuoteAsAsync(string ownerSubject)
     {
         AuthorizeAs(ownerSubject, "quotes.write");
@@ -124,7 +145,10 @@ public sealed class QuoteAuthorizationTests : IAsyncLifetime
         return body.RootElement.GetProperty("id").GetInt32();
     }
 
-    private string CreateInternalJwt(string subject, string? scope)
+    private string CreateInternalJwt(
+        string subject,
+        string? scope,
+        DateTime? expiresAt = null)
     {
         var jwtSettings = _factory.Services.GetRequiredService<JwtSettings>();
 
@@ -143,11 +167,47 @@ public sealed class QuoteAuthorizationTests : IAsyncLifetime
             issuer: jwtSettings.Issuer,
             audience: jwtSettings.Audience,
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(5),
+            expires: expiresAt ?? DateTime.UtcNow.AddMinutes(5),
             signingCredentials: new SigningCredentials(
                 new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key)),
                 SecurityAlgorithms.HmacSha256));
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
-}
+    [Fact]
+    public async Task Refresh_ReusingOldRefreshToken_ReturnsUnauthorized()
+    {
+        var loginResponse = await _client.PostAsJsonAsync(
+            "/api/auth/login",
+            new LoginRequest(
+                "admin@example.com",
+                "P@ssword1"));
+
+        loginResponse.EnsureSuccessStatusCode();
+
+        var login = await loginResponse.Content
+            .ReadFromJsonAsync<JsonElement>();
+
+        var refreshToken = login
+            .GetProperty("refresh_token")
+            .GetString();
+
+        Assert.False(string.IsNullOrWhiteSpace(refreshToken));
+
+        // First use: token is rotated.
+        var firstRefreshResponse = await _client.PostAsJsonAsync(
+            "/api/auth/refresh",
+            new RefreshTokenRequest(refreshToken!));
+
+        firstRefreshResponse.EnsureSuccessStatusCode();
+
+        // Second use of the OLD token: should be rejected.
+        var reuseResponse = await _client.PostAsJsonAsync(
+            "/api/auth/refresh",
+            new RefreshTokenRequest(refreshToken!));
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            reuseResponse.StatusCode);
+            }
+    }
