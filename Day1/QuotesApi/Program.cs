@@ -11,6 +11,8 @@ using QuotesApi.Contracts;
 using QuotesApi.Data;
 using QuotesApi.Models;
 using QuotesApi.Repositories;
+using QuotesApi.Services;
+using QuotesApi.Time;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -139,6 +141,8 @@ builder.Services.AddAuthorization(options =>
 
 builder.Services.AddSingleton<IAuthorizationHandler, CanModifyOwnQuoteHandler>();
 builder.Services.AddSingleton(jwtSettings);
+builder.Services.AddSingleton<IClock, SystemClock>();
+builder.Services.AddSingleton<RefreshTokenEvaluator>();
 
 var connectionString =
     builder.Configuration.GetConnectionString("DefaultConnection")
@@ -392,6 +396,7 @@ static void MapAuthEndpoints(WebApplication app)
         RefreshTokenRequest request,
         QuotesDbContext db,
         JwtSettings jwtSettings,
+        RefreshTokenEvaluator refreshTokenEvaluator,
         ILogger<Program> logger,
         CancellationToken cancellationToken) =>
     {
@@ -410,11 +415,13 @@ static void MapAuthEndpoints(WebApplication app)
             return Results.Unauthorized();
         }
 
+        var validation = refreshTokenEvaluator.Evaluate(storedToken);
+
         // -----------------------------------------------------
         // REUSE DETECTION
         // -----------------------------------------------------
 
-        if (storedToken.RevokedAt is not null)
+        if (validation is RefreshTokenValidation.Reused)
         {
             logger.LogWarning(
                 "Refresh token reuse detected for user {UserId} and family {FamilyId}",
@@ -442,8 +449,7 @@ static void MapAuthEndpoints(WebApplication app)
         // EXPIRATION CHECK
         // -----------------------------------------------------
 
-        if (storedToken.ExpiresAt <=
-            DateTimeOffset.UtcNow)
+        if (validation is RefreshTokenValidation.Expired)
         {
             return Results.Unauthorized();
         }
