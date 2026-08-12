@@ -125,7 +125,16 @@ builder.Services
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("can-edit-quotes", policy =>
-        policy.RequireClaim("scope", "quotes.write"));
+        policy.RequireAssertion(context =>
+        {
+            var scope =
+                context.User.FindFirst("scope")?.Value ??
+                context.User.FindFirst("scp")?.Value;
+
+            return scope?
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Contains("quotes.write", StringComparer.Ordinal) == true;
+        }));
 });
 
 builder.Services.AddSingleton<IAuthorizationHandler, CanModifyOwnQuoteHandler>();
@@ -549,7 +558,9 @@ static string CreateAccessToken(
 
         new Claim(
             JwtRegisteredClaimNames.Aud,
-            jwtSettings.Audience)
+            jwtSettings.Audience),
+        
+        new Claim("scope", "quotes.write")
     };
 
     var token = new JwtSecurityToken(
