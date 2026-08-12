@@ -3,8 +3,10 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using QuotesApi.Authorization;
 using QuotesApi.Contracts;
 using QuotesApi.Data;
 using QuotesApi.Models;
@@ -27,9 +29,29 @@ if (keyBytes.Length < 32)
         "JWT key must be at least 256 bits.");
 }
 
+var entraSettings = builder.Configuration
+    .GetSection("Entra")
+    .Get<EntraSettings>()
+    ?? throw new InvalidOperationException("Entra configuration is missing.");
+
+if (string.IsNullOrWhiteSpace(entraSettings.TenantId) ||
+    string.IsNullOrWhiteSpace(entraSettings.ClientId) ||
+    string.IsNullOrWhiteSpace(entraSettings.Audience))
+{
+    throw new InvalidOperationException(
+        "Entra configuration is incomplete. Set Entra:TenantId, Entra:ClientId " +
+        "and Entra:Audience (see appsettings.Development.json).");
+}
+
+var entraAuthority = $"https://login.microsoftonline.com/{entraSettings.TenantId}/v2.0";
+
 builder.Services
-    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
+    .AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = "Smart";
+        options.DefaultChallengeScheme = "Smart";
+    })
+    .AddJwtBearer("InternalJwt", options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
         {
@@ -45,9 +67,68 @@ builder.Services
             ValidateLifetime = true,
             ClockSkew = TimeSpan.FromMinutes(1)
         };
+    })
+    .AddJwtBearer("Entra", options =>
+    {
+        // Authority drives OIDC discovery (signing keys), independent of the
+        // explicit issuer/audience checks below. No client secret is needed
+        // to validate bearer access tokens.
+        options.Authority = entraAuthority;
+
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = entraAuthority,
+
+            ValidateAudience = true,
+            ValidAudience = entraSettings.Audience,
+
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromMinutes(1)
+        };
+    })
+    .AddPolicyScheme("Smart", "Smart", options =>
+    {
+        options.ForwardDefaultSelector = context =>
+        {
+            // Peek at the (still unvalidated) issuer claim only to route the
+            // token to the handler that will actually validate it. This is
+            // not authentication -- the chosen JwtBearer handler still
+            // performs full signature/issuer/audience/lifetime validation.
+            var authorizationHeader = context.Request.Headers.Authorization.ToString();
+
+            if (authorizationHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            {
+                var token = authorizationHeader["Bearer ".Length..].Trim();
+                var handler = new JwtSecurityTokenHandler();
+
+                try
+                {
+                    if (handler.CanReadToken(token) &&
+                        handler.ReadJwtToken(token).Issuer
+                            .StartsWith("https://login.microsoftonline.com/", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return "Entra";
+                    }
+                }
+                catch (ArgumentException)
+                {
+                    // Malformed token (e.g. not valid Base64Url). Fall through so the
+                    // InternalJwt handler rejects it properly with a 401.
+                }
+            }
+
+            return "InternalJwt";
+        };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("can-edit-quotes", policy =>
+        policy.RequireClaim("scope", "quotes.write"));
+});
+
+builder.Services.AddSingleton<IAuthorizationHandler, CanModifyOwnQuoteHandler>();
 builder.Services.AddSingleton(jwtSettings);
 
 var connectionString =
@@ -164,6 +245,7 @@ static void MapQuoteEndpoints(WebApplication app)
 
     group.MapPost("/", async (
         CreateQuoteRequest request,
+        ClaimsPrincipal user,
         IQuoteRepository repository,
         ILogger<Program> logger,
         CancellationToken cancellationToken) =>
@@ -174,7 +256,8 @@ static void MapQuoteEndpoints(WebApplication app)
         {
             quote = Quote.Create(
                 request.Author,
-                request.Text);
+                request.Text,
+                user.GetSubjectId()!);
         }
         catch (QuoteDomainException ex)
         {
@@ -195,29 +278,41 @@ static void MapQuoteEndpoints(WebApplication app)
         return Results.Created(
             $"/api/quotes/{quote.Id}",
             quote);
-    }).RequireAuthorization();
+    }).RequireAuthorization("can-edit-quotes");
 
     group.MapDelete("/{id:int}", async (
         int id,
+        ClaimsPrincipal user,
         IQuoteRepository repository,
+        IAuthorizationService authorizationService,
         ILogger<Program> logger,
         CancellationToken cancellationToken) =>
     {
-        var deleted = await repository.DeleteAsync(
-            id,
-            cancellationToken);
+        var quote = await repository.GetByIdAsync(id, cancellationToken);
 
-        if (!deleted)
+        if (quote is null)
         {
             return Results.NotFound();
         }
+
+        var authorizationResult = await authorizationService.AuthorizeAsync(
+            user,
+            quote,
+            new CanModifyOwnQuoteRequirement());
+
+        if (!authorizationResult.Succeeded)
+        {
+            return Results.Forbid();
+        }
+
+        await repository.DeleteAsync(id, cancellationToken);
 
         logger.LogInformation(
             "Deleted quote {QuoteId}",
             id);
 
         return Results.NoContent();
-    }).RequireAuthorization();
+    }).RequireAuthorization("can-edit-quotes");
 }
 
 static void MapAuthEndpoints(WebApplication app)

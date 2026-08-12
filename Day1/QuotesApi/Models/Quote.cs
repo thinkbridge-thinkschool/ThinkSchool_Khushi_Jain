@@ -6,10 +6,11 @@ public sealed class Quote
     {
     }
 
-    private Quote(string author, string text)
+    private Quote(string author, string text, string ownerId)
     {
         Author = author;
         Text = text;
+        OwnerId = ownerId;
     }
 
     public int Id { get; private set; }
@@ -20,7 +21,13 @@ public sealed class Quote
 
     public bool IsDeleted { get; private set; }
 
-    public static Quote Create(string? author, string? text)
+    /// <summary>
+    /// The "sub" claim of the identity that created this quote. Null for quotes
+    /// created before ownership tracking was introduced.
+    /// </summary>
+    public string? OwnerId { get; private set; }
+
+    public static Quote Create(string? author, string? text, string ownerId)
     {
         if (string.IsNullOrWhiteSpace(author))
             throw new QuoteDomainException("Author is required.");
@@ -36,7 +43,9 @@ public sealed class Quote
         if (text.Length is < 1 or > 1000)
             throw new QuoteDomainException("Text must be 1–1000 characters.");
 
-        return new Quote(author, text);
+        ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
+
+        return new Quote(author, text, ownerId);
     }
 
     public void SoftDelete() => IsDeleted = true;
