@@ -7,7 +7,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using QuotesApi.Contracts;
@@ -35,13 +35,13 @@ public sealed class QuoteAuthorizationTests : IAsyncLifetime
             {
                 builder.UseEnvironment("Development");
 
-                builder.ConfigureAppConfiguration((_, config) =>
-                {
-                    config.AddInMemoryCollection(new Dictionary<string, string?>
-                    {
-                        ["ConnectionStrings:DefaultConnection"] = $"Data Source={_dbPath}"
-                    });
-                });
+                // Program.cs reads ConnectionStrings:DefaultConnection before
+                // builder.Build() runs, so ConfigureAppConfiguration (which only
+                // merges at Build() time) arrives too late to affect it.
+                // UseSetting is folded into configuration immediately.
+                builder.UseSetting(
+                    "ConnectionStrings:DefaultConnection",
+                    $"Data Source={_dbPath}");
             });
 
         _client = _factory.CreateClient();
@@ -53,6 +53,11 @@ public sealed class QuoteAuthorizationTests : IAsyncLifetime
     {
         _client.Dispose();
         _factory.Dispose();
+
+        // Microsoft.Data.Sqlite pools connections at the process level, which
+        // keeps the file locked even after the factory (and its DbContexts)
+        // are disposed. Clear the pool so the temp file can be deleted.
+        SqliteConnection.ClearAllPools();
 
         if (File.Exists(_dbPath))
         {
