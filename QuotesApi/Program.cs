@@ -3,6 +3,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using Azure.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -21,6 +22,17 @@ using Serilog.Context;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Key Vault URI is not a secret, so it's safe to check in via appsettings.json.
+// Everything it resolves (e.g. AzureMonitor:ConnectionString below) never
+// touches source control. DefaultAzureCredential uses the App Service/VM
+// managed identity in Azure and falls back to the developer's Azure CLI
+// login locally.
+var keyVaultUri = builder.Configuration["KeyVault:Uri"];
+if (!string.IsNullOrWhiteSpace(keyVaultUri))
+{
+    builder.Configuration.AddAzureKeyVault(new Uri(keyVaultUri), new DefaultAzureCredential());
+}
+
 builder.Host.UseSerilog((context, loggerConfiguration) => loggerConfiguration
     .ReadFrom.Configuration(context.Configuration)
     .Enrich.FromLogContext());
@@ -33,13 +45,22 @@ builder.Host.UseSerilog((context, loggerConfiguration) => loggerConfiguration
 var activitySource = new ActivitySource("QuotesApi");
 builder.Services.AddSingleton(activitySource);
 
-builder.Services.AddOpenTelemetry()
+var telemetryBuilder = builder.Services.AddOpenTelemetry()
     .ConfigureResource(resource => resource.AddService("QuotesApi"))
     .WithTracing(tracing => tracing
         .AddSource("QuotesApi")
         .AddAspNetCoreInstrumentation()
         .AddHttpClientInstrumentation()
         .AddOtlpExporter());
+
+// Only wire up the Azure Monitor exporter when a connection string is actually
+// configured (Key Vault in Azure, user-secrets locally). This keeps local dev,
+// which only has the OTLP exporter above feeding Jaeger, free of export
+// warnings for a destination that was never configured.
+if (!string.IsNullOrWhiteSpace(builder.Configuration["AzureMonitor:ConnectionString"]))
+{
+    telemetryBuilder.UseAzureMonitor();
+}
 
 builder.Services.AddProblemDetails();
 
