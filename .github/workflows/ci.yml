@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    # GitHub-hosted ubuntu-latest runners ship with a working Docker daemon,
+    # which is all Testcontainers needs to start the SQL Server 2022 container
+    # used by the SqlServer integration tests -- no extra services/setup required.
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore dependencies
+        run: dotnet restore QuotesApi.Tests/QuotesApi.Tests.csproj
+
+      - name: Build
+        run: dotnet build QuotesApi.Tests/QuotesApi.Tests.csproj --no-restore
+
+      - name: Run tests with coverage
+        run: >-
+          dotnet test QuotesApi.Tests/QuotesApi.Tests.csproj
+          --no-build
+          --logger "trx;LogFileName=test-results.trx"
+          --results-directory ./TestResults
+          --collect:"XPlat Code Coverage"
+          --settings coverlet.runsettings
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults/**/*.trx
+          retention-days: 14
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: TestResults/**/coverage.cobertura.xml
+          retention-days: 14
