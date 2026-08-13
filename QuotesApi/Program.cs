@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -6,6 +7,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using QuotesApi.Authorization;
 using QuotesApi.Contracts;
 using QuotesApi.Data;
@@ -21,6 +24,22 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseSerilog((context, loggerConfiguration) => loggerConfiguration
     .ReadFrom.Configuration(context.Configuration)
     .Enrich.FromLogContext());
+
+// Named source for the manual spans this app creates itself (see the
+// refresh-token reuse handling below), separate from the spans that
+// AddAspNetCoreInstrumentation()/AddHttpClientInstrumentation() create
+// automatically. Registered as a singleton so it can be injected into
+// endpoint handlers the same way the rest of this file does.
+var activitySource = new ActivitySource("QuotesApi");
+builder.Services.AddSingleton(activitySource);
+
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(resource => resource.AddService("QuotesApi"))
+    .WithTracing(tracing => tracing
+        .AddSource("QuotesApi")
+        .AddAspNetCoreInstrumentation()
+        .AddHttpClientInstrumentation()
+        .AddOtlpExporter());
 
 builder.Services.AddProblemDetails();
 
@@ -142,9 +161,19 @@ var app = builder.Build();
 // together. PushProperty must stay active for the whole downstream
 // pipeline, so next() is awaited inside the using block rather than
 // returned directly from it.
+//
+// This reads Activity.Current.TraceId rather than HttpContext.TraceIdentifier
+// specifically so the value matches the trace ID OpenTelemetry exports for the
+// same request (ASP.NET Core creates that Activity before user middleware
+// runs, independent of whether OpenTelemetry is even wired up) -- that's what
+// lets a trace in Jaeger and its log lines in the console be found by the
+// same ID. TraceIdentifier is kept only as a fallback for requests that
+// somehow have no Activity.
 app.Use(async (context, next) =>
 {
-    using (LogContext.PushProperty("TraceId", context.TraceIdentifier))
+    var traceId = Activity.Current?.TraceId.ToString() ?? context.TraceIdentifier;
+
+    using (LogContext.PushProperty("TraceId", traceId))
     {
         await next();
     }
@@ -394,6 +423,7 @@ static void MapAuthEndpoints(WebApplication app)
         QuotesDbContext db,
         JwtSettings jwtSettings,
         RefreshTokenEvaluator refreshTokenEvaluator,
+        ActivitySource activitySource,
         ILogger<Program> logger,
         CancellationToken cancellationToken) =>
     {
@@ -420,6 +450,15 @@ static void MapAuthEndpoints(WebApplication app)
 
         if (validation is RefreshTokenValidation.Reused)
         {
+            // Revoking a whole token family is a multi-step, security-sensitive
+            // operation on its own -- automatic instrumentation would only ever
+            // show it as a handful of disconnected EF query spans, with no span
+            // tying them together as "one family got revoked". This is exactly
+            // the kind of non-trivial operation that gets its own manual span.
+            using var activity = activitySource.StartActivity("revoke-refresh-token-family");
+            activity?.SetTag("user.id", storedToken.UserId);
+            activity?.SetTag("family.id", storedToken.FamilyId);
+
             logger.LogWarning(
                 "Refresh token reuse detected for user {UserId} and family {FamilyId}",
                 storedToken.UserId,
@@ -429,6 +468,8 @@ static void MapAuthEndpoints(WebApplication app)
                 .Where(t =>
                     t.FamilyId == storedToken.FamilyId)
                 .ToListAsync(cancellationToken);
+
+            activity?.SetTag("family.token_count", familyTokens.Count);
 
             foreach (var token in familyTokens)
             {
