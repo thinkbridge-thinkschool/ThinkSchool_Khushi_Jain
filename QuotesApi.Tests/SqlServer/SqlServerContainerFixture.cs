@@ -40,7 +40,21 @@ public sealed class SqlServerContainerFixture : IAsyncLifetime
 
                 builder.ConfigureTestServices(services =>
                 {
+                    // Program.cs already registered QuotesDbContext against Sqlite.
+                    // Removing DbContextOptions<QuotesDbContext> alone leaves that
+                    // registration's other EF Core services behind, so EF Core then
+                    // sees two database providers registered and throws. Strip every
+                    // EF Core service the Sqlite registration added before adding the
+                    // SqlServer-backed context.
                     services.RemoveAll<DbContextOptions<QuotesDbContext>>();
+                    services.RemoveAll<QuotesDbContext>();
+
+                    foreach (var descriptor in services
+                        .Where(d => d.ServiceType.Namespace?.StartsWith("Microsoft.EntityFrameworkCore") == true)
+                        .ToList())
+                    {
+                        services.Remove(descriptor);
+                    }
 
                     services.AddDbContext<QuotesDbContext>(options =>
                         options.UseSqlServer(
