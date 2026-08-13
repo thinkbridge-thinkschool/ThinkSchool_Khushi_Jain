@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using QuotesApi.Models;
 using QuotesApi.Time;
@@ -83,7 +84,7 @@ public abstract class IntegrationTestBase : IAsyncLifetime
         string? scope = "quotes.write",
         DateTime? expiresAt = null)
     {
-        var jwtSettings = Factory.Services.GetRequiredService<JwtSettings>();
+        var jwtOptions = Factory.Services.GetRequiredService<IOptions<JwtOptions>>().Value;
 
         var claims = new List<Claim>
         {
@@ -97,12 +98,12 @@ public abstract class IntegrationTestBase : IAsyncLifetime
         }
 
         var token = new JwtSecurityToken(
-            issuer: jwtSettings.Issuer,
-            audience: jwtSettings.Audience,
+            issuer: jwtOptions.Issuer,
+            audience: jwtOptions.Audience,
             claims: claims,
             expires: expiresAt ?? DateTime.UtcNow.AddMinutes(5),
             signingCredentials: new SigningCredentials(
-                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key)),
+                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Key)),
                 SecurityAlgorithms.HmacSha256));
 
         return new JwtSecurityTokenHandler().WriteToken(token);

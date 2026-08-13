@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using QuotesApi.Contracts;
 using QuotesApi.Models;
@@ -155,7 +156,7 @@ public sealed class QuoteAuthorizationTests : IAsyncLifetime
         string? scope,
         DateTime? expiresAt = null)
     {
-        var jwtSettings = _factory.Services.GetRequiredService<JwtSettings>();
+        var jwtOptions = _factory.Services.GetRequiredService<IOptions<JwtOptions>>().Value;
 
         var claims = new List<Claim>
         {
@@ -169,12 +170,12 @@ public sealed class QuoteAuthorizationTests : IAsyncLifetime
         }
 
         var token = new JwtSecurityToken(
-            issuer: jwtSettings.Issuer,
-            audience: jwtSettings.Audience,
+            issuer: jwtOptions.Issuer,
+            audience: jwtOptions.Audience,
             claims: claims,
             expires: expiresAt ?? DateTime.UtcNow.AddMinutes(5),
             signingCredentials: new SigningCredentials(
-                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key)),
+                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Key)),
                 SecurityAlgorithms.HmacSha256));
 
         return new JwtSecurityTokenHandler().WriteToken(token);

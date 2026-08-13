@@ -8,6 +8,7 @@ using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -65,34 +66,42 @@ if (!string.IsNullOrWhiteSpace(builder.Configuration["AzureMonitor:ConnectionStr
 
 builder.Services.AddProblemDetails();
 
-var jwtSettings = builder.Configuration
-    .GetSection("Jwt")
-    .Get<JwtSettings>()
+// The typed options binding below is what every downstream consumer (the
+// login/refresh handlers, CreateAccessToken) actually injects via
+// IOptions<JwtOptions>. ValidateOnStart forces the byte-length check to run
+// during app startup rather than on first use, so a bad key fails the same
+// way a missing one does -- immediately, not on the first login attempt.
+builder.Services.AddOptions<JwtOptions>()
+    .Bind(builder.Configuration.GetSection("Jwt"))
+    .Validate(
+        options => Encoding.UTF8.GetByteCount(options.Key) >= 32,
+        "JWT key must be at least 256 bits.")
+    .ValidateOnStart();
+
+// AddJwtBearer below wires up authentication middleware itself, which
+// happens before builder.Build() -- too early to resolve IOptions<JwtOptions>
+// from the DI container. This one bootstrap read binds directly from
+// configuration for that reason only.
+var jwtBootstrapOptions = builder.Configuration.GetSection("Jwt").Get<JwtOptions>()
     ?? throw new InvalidOperationException("JWT configuration is missing.");
 
-var keyBytes = Encoding.UTF8.GetBytes(jwtSettings.Key);
+var jwtSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtBootstrapOptions.Key));
 
-if (keyBytes.Length < 32)
-{
-    throw new InvalidOperationException(
-        "JWT key must be at least 256 bits.");
-}
-
-var entraSettings = builder.Configuration
+var entraOptions = builder.Configuration
     .GetSection("Entra")
-    .Get<EntraSettings>()
+    .Get<EntraOptions>()
     ?? throw new InvalidOperationException("Entra configuration is missing.");
 
-if (string.IsNullOrWhiteSpace(entraSettings.TenantId) ||
-    string.IsNullOrWhiteSpace(entraSettings.ClientId) ||
-    string.IsNullOrWhiteSpace(entraSettings.Audience))
+if (string.IsNullOrWhiteSpace(entraOptions.TenantId) ||
+    string.IsNullOrWhiteSpace(entraOptions.ClientId) ||
+    string.IsNullOrWhiteSpace(entraOptions.Audience))
 {
     throw new InvalidOperationException(
         "Entra configuration is incomplete. Set Entra:TenantId, Entra:ClientId " +
         "and Entra:Audience (see appsettings.Development.json).");
 }
 
-var entraAuthority = $"https://login.microsoftonline.com/{entraSettings.TenantId}/v2.0";
+var entraAuthority = $"https://login.microsoftonline.com/{entraOptions.TenantId}/v2.0";
 
 builder.Services
     .AddAuthentication(options =>
@@ -105,13 +114,13 @@ builder.Services
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
-            ValidIssuer = jwtSettings.Issuer,
+            ValidIssuer = jwtBootstrapOptions.Issuer,
 
             ValidateAudience = true,
-            ValidAudience = jwtSettings.Audience,
+            ValidAudience = jwtBootstrapOptions.Audience,
 
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(keyBytes),
+            IssuerSigningKey = jwtSigningKey,
 
             ValidateLifetime = true,
             ClockSkew = TimeSpan.FromMinutes(1)
@@ -130,7 +139,7 @@ builder.Services
             ValidIssuer = entraAuthority,
 
             ValidateAudience = true,
-            ValidAudience = entraSettings.Audience,
+            ValidAudience = entraOptions.Audience,
 
             ValidateLifetime = true,
             ClockSkew = TimeSpan.FromMinutes(1)
@@ -162,7 +171,6 @@ builder.Services.AddAuthorization(options =>
 });
 
 builder.Services.AddSingleton<IAuthorizationHandler, CanModifyOwnQuoteHandler>();
-builder.Services.AddSingleton(jwtSettings);
 builder.Services.AddSingleton<IClock, SystemClock>();
 builder.Services.AddSingleton<RefreshTokenEvaluator>();
 
@@ -387,7 +395,7 @@ static void MapAuthEndpoints(WebApplication app)
     authGroup.MapPost("/login", async (
         LoginRequest request,
         QuotesDbContext db,
-        JwtSettings jwtSettings,
+        IOptions<JwtOptions> jwtOptions,
         CancellationToken cancellationToken) =>
     {
         var user = await db.Users
@@ -405,7 +413,7 @@ static void MapAuthEndpoints(WebApplication app)
         }
 
         var accessToken =
-            CreateAccessToken(user, jwtSettings);
+            CreateAccessToken(user, jwtOptions.Value);
 
         var refreshToken =
             GenerateRefreshToken();
@@ -432,7 +440,7 @@ static void MapAuthEndpoints(WebApplication app)
             access_token = accessToken,
             refresh_token = refreshToken,
             expires_in =
-                jwtSettings.AccessTokenMinutes * 60
+                jwtOptions.Value.AccessTokenMinutes * 60
         });
     });
 
@@ -443,7 +451,7 @@ static void MapAuthEndpoints(WebApplication app)
     authGroup.MapPost("/refresh", async (
         RefreshTokenRequest request,
         QuotesDbContext db,
-        JwtSettings jwtSettings,
+        IOptions<JwtOptions> jwtOptions,
         RefreshTokenEvaluator refreshTokenEvaluator,
         ActivitySource activitySource,
         ILogger<Program> logger,
@@ -553,7 +561,7 @@ static void MapAuthEndpoints(WebApplication app)
         var accessToken =
             CreateAccessToken(
                 storedToken.User,
-                jwtSettings);
+                jwtOptions.Value);
 
         await db.SaveChangesAsync(
             cancellationToken);
@@ -563,7 +571,7 @@ static void MapAuthEndpoints(WebApplication app)
             access_token = accessToken,
             refresh_token = newRefreshToken,
             expires_in =
-                jwtSettings.AccessTokenMinutes * 60
+                jwtOptions.Value.AccessTokenMinutes * 60
         });
     });
 
@@ -606,7 +614,7 @@ static void MapAuthEndpoints(WebApplication app)
 
 static string CreateAccessToken(
     User user,
-    JwtSettings jwtSettings)
+    JwtOptions jwtOptions)
 {
     var claims = new[]
     {
@@ -620,27 +628,27 @@ static string CreateAccessToken(
 
         new Claim(
             JwtRegisteredClaimNames.Iss,
-            jwtSettings.Issuer),
+            jwtOptions.Issuer),
 
         new Claim(
             JwtRegisteredClaimNames.Aud,
-            jwtSettings.Audience),
-        
+            jwtOptions.Audience),
+
         new Claim("scope", "quotes.write")
     };
 
     var token = new JwtSecurityToken(
-        issuer: jwtSettings.Issuer,
-        audience: jwtSettings.Audience,
+        issuer: jwtOptions.Issuer,
+        audience: jwtOptions.Audience,
         claims: claims,
         expires:
             DateTime.UtcNow.AddMinutes(
-                jwtSettings.AccessTokenMinutes),
+                jwtOptions.AccessTokenMinutes),
         signingCredentials:
             new SigningCredentials(
                 new SymmetricSecurityKey(
                     Encoding.UTF8.GetBytes(
-                        jwtSettings.Key)),
+                        jwtOptions.Key)),
                 SecurityAlgorithms.HmacSha256));
 
     return new JwtSecurityTokenHandler()

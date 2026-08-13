@@ -8,6 +8,7 @@ using System.Text.Json;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using QuotesApi.Contracts;
 using QuotesApi.Data;
@@ -112,7 +113,7 @@ public sealed class QuotesApiSqlServerIntegrationTests(SqlServerContainerFixture
 
     private string CreateInternalJwt(string subject)
     {
-        var jwtSettings = fixture.Factory.Services.GetRequiredService<JwtSettings>();
+        var jwtOptions = fixture.Factory.Services.GetRequiredService<IOptions<JwtOptions>>().Value;
 
         var claims = new List<Claim>
         {
@@ -122,12 +123,12 @@ public sealed class QuotesApiSqlServerIntegrationTests(SqlServerContainerFixture
         };
 
         var token = new JwtSecurityToken(
-            issuer: jwtSettings.Issuer,
-            audience: jwtSettings.Audience,
+            issuer: jwtOptions.Issuer,
+            audience: jwtOptions.Audience,
             claims: claims,
             expires: DateTime.UtcNow.AddMinutes(5),
             signingCredentials: new SigningCredentials(
-                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key)),
+                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Key)),
                 SecurityAlgorithms.HmacSha256));
 
         return new JwtSecurityTokenHandler().WriteToken(token);
