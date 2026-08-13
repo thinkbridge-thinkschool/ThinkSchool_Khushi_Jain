@@ -91,37 +91,12 @@ builder.Services
     })
     .AddPolicyScheme("Smart", "Smart", options =>
     {
+        // Peek at the (still unvalidated) issuer claim only to route the
+        // token to the handler that will actually validate it. This is
+        // not authentication -- the chosen JwtBearer handler still
+        // performs full signature/issuer/audience/lifetime validation.
         options.ForwardDefaultSelector = context =>
-        {
-            // Peek at the (still unvalidated) issuer claim only to route the
-            // token to the handler that will actually validate it. This is
-            // not authentication -- the chosen JwtBearer handler still
-            // performs full signature/issuer/audience/lifetime validation.
-            var authorizationHeader = context.Request.Headers.Authorization.ToString();
-
-            if (authorizationHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-            {
-                var token = authorizationHeader["Bearer ".Length..].Trim();
-                var handler = new JwtSecurityTokenHandler();
-
-                try
-                {
-                    if (handler.CanReadToken(token) &&
-                        handler.ReadJwtToken(token).Issuer
-                            .StartsWith("https://login.microsoftonline.com/", StringComparison.OrdinalIgnoreCase))
-                    {
-                        return "Entra";
-                    }
-                }
-                catch (ArgumentException)
-                {
-                    // Malformed token (e.g. not valid Base64Url). Fall through so the
-                    // InternalJwt handler rejects it properly with a 401.
-                }
-            }
-
-            return "InternalJwt";
-        };
+            AuthenticationSchemeSelector.Select(context.Request.Headers.Authorization.ToString());
     });
 
 builder.Services.AddAuthorization(options =>
