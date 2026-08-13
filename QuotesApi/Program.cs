@@ -13,8 +13,14 @@ using QuotesApi.Models;
 using QuotesApi.Repositories;
 using QuotesApi.Services;
 using QuotesApi.Time;
+using Serilog;
+using Serilog.Context;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseSerilog((context, loggerConfiguration) => loggerConfiguration
+    .ReadFrom.Configuration(context.Configuration)
+    .Enrich.FromLogContext());
 
 builder.Services.AddProblemDetails();
 
@@ -129,6 +135,22 @@ builder.Services.AddDbContext<QuotesDbContext>(options =>
 builder.Services.AddScoped<IQuoteRepository, QuoteRepository>();
 
 var app = builder.Build();
+
+// Every log line written while handling this request -- including the
+// request-summary line below and anything the exception handler logs --
+// shares this TraceId, so a single request's log lines can be filtered
+// together. PushProperty must stay active for the whole downstream
+// pipeline, so next() is awaited inside the using block rather than
+// returned directly from it.
+app.Use(async (context, next) =>
+{
+    using (LogContext.PushProperty("TraceId", context.TraceIdentifier))
+    {
+        await next();
+    }
+});
+
+app.UseSerilogRequestLogging();
 
 app.UseExceptionHandler(exceptionApp =>
 {
