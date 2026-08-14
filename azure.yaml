@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+
+name: thinkschool-khushi-jain
+metadata:
+    template: azd-init@1.31.1
+services:
+    quotes-api:
+        project: QuotesApi
+        host: containerapp
+        language: dotnet
+        env:
+            ASPNETCORE_ENVIRONMENT: Development
+            ConnectionStrings__DefaultConnection: "Data Source=/tmp/quotes.db"
+resources:
+    quotes-api:
+        type: host.containerapp
+        port: 8080
