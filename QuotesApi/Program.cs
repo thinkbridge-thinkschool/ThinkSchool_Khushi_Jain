@@ -267,6 +267,8 @@ static void MapQuoteEndpoints(WebApplication app)
         int? page,
         int? size,
         IQuoteRepository repository,
+        QuotesDbContext db,
+        ActivitySource activitySource,
         CancellationToken cancellationToken) =>
     {
         var currentPage = page.GetValueOrDefault(1);
@@ -289,12 +291,40 @@ static void MapQuoteEndpoints(WebApplication app)
             pageSize,
             cancellationToken);
 
+        // Flags whether each quote's owner account still exists, so the
+        // client can grey out quotes left behind by a deleted account.
+        // Fetches every owner in a single batched query instead of one
+        // query per quote (see the Day 5 tracing exercise's before/after
+        // traces for what the N+1 version of this cost).
+        using var activity = activitySource.StartActivity("check-owner-status");
+        activity?.SetTag("owner_checks.count", result.Items.Count);
+
+        var ownerIds = result.Items
+            .Where(q => q.OwnerId is not null)
+            .Select(q => q.OwnerId!)
+            .Distinct()
+            .ToList();
+
+        var activeOwners = await db.Users
+            .Where(u => ownerIds.Contains(u.Email))
+            .Select(u => u.Email)
+            .ToHashSetAsync(cancellationToken);
+
+        var itemsWithOwnerStatus = result.Items.Select(quote => new
+        {
+            quote.Id,
+            quote.Author,
+            quote.Text,
+            quote.OwnerId,
+            ownerActive = quote.OwnerId is not null && activeOwners.Contains(quote.OwnerId)
+        });
+
         return Results.Ok(new
         {
             page = currentPage,
             size = pageSize,
             total = result.Total,
-            items = result.Items
+            items = itemsWithOwnerStatus
         });
     });
 
