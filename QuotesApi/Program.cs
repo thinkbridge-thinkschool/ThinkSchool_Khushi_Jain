@@ -17,6 +17,7 @@ using QuotesApi.Contracts;
 using QuotesApi.Data;
 using QuotesApi.Models;
 using QuotesApi.Repositories;
+using QuotesApi.Resilience;
 using QuotesApi.Services;
 using QuotesApi.Time;
 using Serilog;
@@ -107,6 +108,20 @@ if (string.IsNullOrWhiteSpace(entraOptions.TenantId) ||
 }
 
 var entraAuthority = $"https://login.microsoftonline.com/{entraOptions.TenantId}/v2.0";
+
+// The "Entra" scheme below calls out to login.microsoftonline.com for OIDC
+// discovery and JWKS signing keys -- the one real external HTTP dependency
+// this API has. Giving its backchannel client retry/circuit-breaker/timeout
+// resilience means a transient blip talking to Entra doesn't turn into a
+// hard failure validating an otherwise-valid token.
+builder.Services.AddHttpClient(EntraHttpClientExtensions.ClientName)
+    .AddEntraResilienceHandler();
+
+builder.Services.AddOptions<JwtBearerOptions>("Entra")
+    .Configure<IHttpClientFactory>((options, factory) =>
+    {
+        options.Backchannel = factory.CreateClient(EntraHttpClientExtensions.ClientName);
+    });
 
 builder.Services
     .AddAuthentication(options =>
