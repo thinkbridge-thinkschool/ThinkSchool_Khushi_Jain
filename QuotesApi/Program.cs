@@ -65,6 +65,7 @@ if (!string.IsNullOrWhiteSpace(builder.Configuration["AzureMonitor:ConnectionStr
 }
 
 builder.Services.AddProblemDetails();
+builder.Services.AddHealthChecks();
 
 // The typed options binding below is what every downstream consumer (the
 // login/refresh handlers, CreateAccessToken) actually injects via
@@ -253,6 +254,8 @@ using (var scope = app.Services.CreateScope())
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.MapHealthChecks("/health");
 
 MapAuthEndpoints(app);
 MapQuoteEndpoints(app);
