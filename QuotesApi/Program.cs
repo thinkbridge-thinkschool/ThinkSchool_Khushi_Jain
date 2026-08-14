@@ -56,10 +56,14 @@ var telemetryBuilder = builder.Services.AddOpenTelemetry()
         .AddOtlpExporter());
 
 // Only wire up the Azure Monitor exporter when a connection string is actually
-// configured (Key Vault in Azure, user-secrets locally). This keeps local dev,
-// which only has the OTLP exporter above feeding Jaeger, free of export
-// warnings for a destination that was never configured.
-if (!string.IsNullOrWhiteSpace(builder.Configuration["AzureMonitor:ConnectionString"]))
+// configured (Key Vault in Azure, user-secrets locally, or the
+// APPLICATIONINSIGHTS_CONNECTION_STRING env var azd injects automatically).
+// This keeps local dev, which only has the OTLP exporter above feeding
+// Jaeger, free of export warnings for a destination that was never
+// configured. UseAzureMonitor() resolves whichever of the two is set on its
+// own, so this check only needs to decide whether to call it at all.
+if (!string.IsNullOrWhiteSpace(builder.Configuration["AzureMonitor:ConnectionString"]) ||
+    !string.IsNullOrWhiteSpace(builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]))
 {
     telemetryBuilder.UseAzureMonitor();
 }
