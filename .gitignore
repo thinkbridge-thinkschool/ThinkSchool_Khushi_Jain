@@ -1,5 +1,13 @@
-﻿bin/
+bin/
 obj/
-*.dbTestResults/
+
+*.db
+*.db-shm
+*.db-wal
+
+TestResults/
+*.trx
+RefactorOrders/test-output.txt
+
 .azure
 .vscode/
