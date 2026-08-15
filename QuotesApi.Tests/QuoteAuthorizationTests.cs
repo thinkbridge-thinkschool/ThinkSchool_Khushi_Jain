@@ -5,6 +5,7 @@ using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
+using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
@@ -36,13 +37,15 @@ public sealed class QuoteAuthorizationTests : IAsyncLifetime
             {
                 builder.UseEnvironment("Development");
 
-                // Program.cs reads ConnectionStrings:DefaultConnection before
+                // AddInfrastructure reads ConnectionStrings:DefaultConnection before
                 // builder.Build() runs, so ConfigureAppConfiguration (which only
                 // merges at Build() time) arrives too late to affect it.
                 // UseSetting is folded into configuration immediately.
                 builder.UseSetting(
                     "ConnectionStrings:DefaultConnection",
                     $"Data Source={_dbPath}");
+
+                builder.UseTestSecrets();
             });
 
         _client = _factory.CreateClient();
@@ -73,7 +76,7 @@ public sealed class QuoteAuthorizationTests : IAsyncLifetime
     {
         var response = await _client.DeleteAsync("/api/quotes/1");
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -85,7 +88,7 @@ public sealed class QuoteAuthorizationTests : IAsyncLifetime
 
         var response = await _client.DeleteAsync($"/api/quotes/{quoteId}");
 
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
     [Fact]
     public async Task Delete_WithExpiredToken_ReturnsUnauthorized()
@@ -100,9 +103,7 @@ public sealed class QuoteAuthorizationTests : IAsyncLifetime
         var response = await _client.DeleteAsync(
             $"/api/quotes/{quoteId}");
 
-        Assert.Equal(
-            HttpStatusCode.Unauthorized,
-            response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -114,7 +115,7 @@ public sealed class QuoteAuthorizationTests : IAsyncLifetime
 
         var response = await _client.DeleteAsync($"/api/quotes/{quoteId}");
 
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -126,7 +127,7 @@ public sealed class QuoteAuthorizationTests : IAsyncLifetime
 
         var response = await _client.DeleteAsync($"/api/quotes/{quoteId}");
 
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
 
     private void AuthorizeAs(
@@ -175,7 +176,7 @@ public sealed class QuoteAuthorizationTests : IAsyncLifetime
             claims: claims,
             expires: expiresAt ?? DateTime.UtcNow.AddMinutes(5),
             signingCredentials: new SigningCredentials(
-                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Key)),
+                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SigningKey)),
                 SecurityAlgorithms.HmacSha256));
 
         return new JwtSecurityTokenHandler().WriteToken(token);
@@ -186,8 +187,8 @@ public sealed class QuoteAuthorizationTests : IAsyncLifetime
         var loginResponse = await _client.PostAsJsonAsync(
             "/api/auth/login",
             new LoginRequest(
-                "admin@example.com",
-                "P@ssword1"));
+                TestConfiguration.SeedAdminEmail,
+                TestConfiguration.SeedAdminPassword));
 
         loginResponse.EnsureSuccessStatusCode();
 
@@ -198,7 +199,7 @@ public sealed class QuoteAuthorizationTests : IAsyncLifetime
             .GetProperty("refresh_token")
             .GetString();
 
-        Assert.False(string.IsNullOrWhiteSpace(refreshToken));
+        refreshToken.Should().NotBeNullOrWhiteSpace();
 
         // First use: token is rotated.
         var firstRefreshResponse = await _client.PostAsJsonAsync(
@@ -212,8 +213,6 @@ public sealed class QuoteAuthorizationTests : IAsyncLifetime
             "/api/auth/refresh",
             new RefreshTokenRequest(refreshToken!));
 
-        Assert.Equal(
-            HttpStatusCode.Unauthorized,
-            reuseResponse.StatusCode);
-            }
+        reuseResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
+}

@@ -1,4 +1,5 @@
 using System.Net;
+using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using QuotesApi.Resilience;
@@ -30,9 +31,9 @@ public class EntraResilienceHandlerTests
 
         var response = await client.GetAsync("https://entra.test/.well-known/openid-configuration");
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal(2, loggerProvider.RetryWarnings.Count);
-        Assert.All(loggerProvider.RetryWarnings, message => Assert.Contains("EntraDiscovery", message));
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        loggerProvider.RetryWarnings.Should().HaveCount(2);
+        loggerProvider.RetryWarnings.Should().OnlyContain(message => message.Contains("EntraDiscovery"));
     }
 
     [Fact]
@@ -55,8 +56,8 @@ public class EntraResilienceHandlerTests
 
         // Persistent failure isn't hidden -- the caller still sees it after
         // the 3 configured retry attempts are exhausted.
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
-        Assert.Equal(3, loggerProvider.RetryWarnings.Count);
+        response.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+        loggerProvider.RetryWarnings.Should().HaveCount(3);
     }
 
     private sealed class FlakyHandler(int failuresBeforeSuccess) : DelegatingHandler

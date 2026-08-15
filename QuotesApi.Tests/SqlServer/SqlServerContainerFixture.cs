@@ -38,9 +38,11 @@ public sealed class SqlServerContainerFixture : IAsyncLifetime
             {
                 builder.UseEnvironment("Development");
 
+                builder.UseTestSecrets();
+
                 builder.ConfigureTestServices(services =>
                 {
-                    // Program.cs already registered QuotesDbContext against Sqlite.
+                    // AddInfrastructure already registered QuotesDbContext against Sqlite.
                     // Removing DbContextOptions<QuotesDbContext> alone leaves that
                     // registration's other EF Core services behind, so EF Core then
                     // sees two database providers registered and throws. Strip every
@@ -68,7 +70,7 @@ public sealed class SqlServerContainerFixture : IAsyncLifetime
 
         // Accessing Services forces WebApplicationFactory to build and start
         // the host now (rather than lazily on the first test's request),
-        // which runs Program.cs's own startup block -- EF migrations and the
+        // which runs MigrateAndSeedAsync -- EF migrations and the
         // admin user seed -- against the container we just started, using
         // the exact same production code path as the SQLite host.
         _ = Factory.Services;

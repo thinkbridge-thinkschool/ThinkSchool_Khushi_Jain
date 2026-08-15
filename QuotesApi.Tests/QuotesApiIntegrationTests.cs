@@ -21,7 +21,9 @@ public sealed class QuotesApiIntegrationTests : IntegrationTestBase
     {
         var response = await Client.PostAsJsonAsync(
             "/api/auth/login",
-            new LoginRequest("admin@example.com", "P@ssword1"));
+            new LoginRequest(
+                TestConfiguration.SeedAdminEmail,
+                TestConfiguration.SeedAdminPassword));
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -35,7 +37,7 @@ public sealed class QuotesApiIntegrationTests : IntegrationTestBase
     {
         var response = await Client.PostAsJsonAsync(
             "/api/auth/login",
-            new LoginRequest("admin@example.com", "wrong-password"));
+            new LoginRequest(TestConfiguration.SeedAdminEmail, "wrong-password"));
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
@@ -64,6 +66,49 @@ public sealed class QuotesApiIntegrationTests : IntegrationTestBase
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
         body.GetProperty("refresh_token").GetString().Should().NotBe(originalRefreshToken);
         body.GetProperty("access_token").GetString().Should().NotBeNullOrWhiteSpace();
+    }
+
+    /// <summary>
+    /// Reuse detection has to kill the whole family, not just the token that
+    /// was replayed. Asserting only that the replayed token is rejected would
+    /// pass even if the leaked chain's live replacement still worked, which is
+    /// the case that matters: an attacker holding the old token forces the
+    /// legitimate holder's session to be revoked too.
+    /// </summary>
+    [Fact]
+    public async Task Refresh_WhenAReplacedTokenIsReplayed_RevokesTheEntireFamily()
+    {
+        var login = await Client.PostAsJsonAsync(
+            "/api/auth/login",
+            new LoginRequest(
+                TestConfiguration.SeedAdminEmail,
+                TestConfiguration.SeedAdminPassword));
+
+        login.EnsureSuccessStatusCode();
+        var original = (await login.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("refresh_token").GetString()!;
+
+        var rotation = await Client.PostAsJsonAsync(
+            "/api/auth/refresh",
+            new RefreshTokenRequest(original));
+
+        rotation.EnsureSuccessStatusCode();
+        var replacement = (await rotation.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("refresh_token").GetString()!;
+
+        var replay = await Client.PostAsJsonAsync(
+            "/api/auth/refresh",
+            new RefreshTokenRequest(original));
+
+        replay.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        var afterCascade = await Client.PostAsJsonAsync(
+            "/api/auth/refresh",
+            new RefreshTokenRequest(replacement));
+
+        afterCascade.StatusCode.Should().Be(
+            HttpStatusCode.Unauthorized,
+            "the replacement token shares the leaked token's family and must be revoked with it");
     }
 
     [Fact]
@@ -194,8 +239,14 @@ public sealed class QuotesApiIntegrationTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
+    /// <summary>
+    /// The request record's DataAnnotations are evaluated before the handler
+    /// runs, so this never reaches Quote.Create. The response must be a
+    /// ValidationProblemDetails -- an "errors" dictionary keyed by member name
+    /// -- rather than the flat ProblemDetails the domain layer produces.
+    /// </summary>
     [Fact]
-    public async Task CreateQuote_WithEmptyAuthor_ReturnsBadRequestProblemDetails()
+    public async Task CreateQuote_WithEmptyAuthor_ReturnsValidationProblemDetails()
     {
         AuthorizeAs("owner@example.com", "quotes.write");
 
@@ -206,8 +257,29 @@ public sealed class QuotesApiIntegrationTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
-        body.GetProperty("title").GetString().Should().Be("Quote validation failed");
-        body.GetProperty("detail").GetString().Should().Be("Author is required.");
+
+        body.TryGetProperty("errors", out var errors)
+            .Should().BeTrue("ValidationProblemDetails carries a keyed errors dictionary");
+
+        errors.TryGetProperty(nameof(CreateQuoteRequest.Author), out _)
+            .Should().BeTrue("the failing member should be named in the response");
+    }
+
+    /// <summary>
+    /// Author length is an invariant the aggregate owns as well as an
+    /// annotation, so this covers the domain path still returning 400 for a
+    /// value that gets past binding.
+    /// </summary>
+    [Fact]
+    public async Task CreateQuote_WithAuthorOver200Characters_ReturnsBadRequest()
+    {
+        AuthorizeAs("owner@example.com", "quotes.write");
+
+        var response = await Client.PostAsJsonAsync(
+            "/api/quotes",
+            new CreateQuoteRequest(new string('a', 201), "Some valid text"));
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -241,7 +313,9 @@ public sealed class QuotesApiIntegrationTests : IntegrationTestBase
     {
         var response = await Client.PostAsJsonAsync(
             "/api/auth/login",
-            new LoginRequest("admin@example.com", "P@ssword1"));
+            new LoginRequest(
+                TestConfiguration.SeedAdminEmail,
+                TestConfiguration.SeedAdminPassword));
 
         response.EnsureSuccessStatusCode();
 

@@ -38,13 +38,15 @@ public abstract class IntegrationTestBase : IAsyncLifetime
             {
                 builder.UseEnvironment("Development");
 
-                // Program.cs reads ConnectionStrings:DefaultConnection before
+                // AddInfrastructure reads ConnectionStrings:DefaultConnection before
                 // builder.Build() runs, so ConfigureAppConfiguration (which only
                 // merges at Build() time) arrives too late to affect it.
                 // UseSetting is folded into configuration immediately.
                 builder.UseSetting(
                     "ConnectionStrings:DefaultConnection",
                     $"Data Source={_dbPath}");
+
+                builder.UseTestSecrets();
 
                 builder.ConfigureTestServices(services =>
                 {
@@ -103,7 +105,7 @@ public abstract class IntegrationTestBase : IAsyncLifetime
             claims: claims,
             expires: expiresAt ?? DateTime.UtcNow.AddMinutes(5),
             signingCredentials: new SigningCredentials(
-                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Key)),
+                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SigningKey)),
                 SecurityAlgorithms.HmacSha256));
 
         return new JwtSecurityTokenHandler().WriteToken(token);

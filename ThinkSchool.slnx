@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="QuotesApi/QuotesApi.csproj" />
+  <Project Path="QuotesApi.Tests/QuotesApi.Tests.csproj" />
+  <Project Path="Tests.Domain/Tests.Domain.csproj" />
+  <Project Path="RefactorOrders/RefactorOrders.csproj" />
+  <Project Path="RefactorOrders/RefactorOrders.Tests/RefactorOrders.Tests.csproj" />
+  <Project Path="hello-cs/hello-cs.csproj" />
+</Solution>

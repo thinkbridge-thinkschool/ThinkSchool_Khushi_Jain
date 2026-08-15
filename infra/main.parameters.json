@@ -16,6 +16,9 @@
       },
       "principalType": {
         "value": "${AZURE_PRINCIPAL_TYPE}"
+      },
+      "jwtSigningKey": {
+        "value": "${AZURE_JWT_SIGNING_KEY}"
       }
     }
 }

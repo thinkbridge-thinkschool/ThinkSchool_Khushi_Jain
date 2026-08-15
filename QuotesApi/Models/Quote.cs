@@ -43,7 +43,8 @@ public sealed class Quote
         if (text.Length is < 1 or > 1000)
             throw new QuoteDomainException("Text must be 1–1000 characters.");
 
-        ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
+        if (string.IsNullOrWhiteSpace(ownerId))
+            throw new QuoteDomainException("Quote owner is required.");
 
         return new Quote(author, text, ownerId);
     }
