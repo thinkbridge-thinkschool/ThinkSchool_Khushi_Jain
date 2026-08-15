@@ -10,8 +10,24 @@ Azure Container Apps.
 |---|---|
 | `QuotesApi/` | The API — quotes, collections, auth, telemetry |
 | `QuotesApi.Tests/` | Unit and integration tests, including a real SQL Server suite via Testcontainers |
+| `Tests.Domain/` | Aggregate invariant tests. No database, no host, no fixtures |
 | `RefactorOrders/` | The god-method refactor exercise. `Original/OrderController.cs` is the unrefactored file, kept for comparison |
 | `hello-cs/`, `hello-ts/` | Day 1 two-language warm-up |
+
+### A note on the two `Controllers/` folders
+
+Both projects call their request-handling layer `Controllers/`, but they use different ASP.NET Core
+mechanisms:
+
+- `QuotesApi/Controllers/` holds **minimal-API** route registrations — static classes whose
+  `Map…Endpoints()` extension methods are called from `Program.cs`. They do not derive from
+  `ControllerBase`.
+- `RefactorOrders/Controllers/` holds a conventional **MVC controller** — `[ApiController]`, deriving from
+  `ControllerBase`, with attribute routing. That project exists to demonstrate refactoring a god-method
+  controller, so it is deliberately controller-based.
+
+The practical difference is validation: `[ApiController]` checks model state automatically and returns
+`ValidationProblemDetails` before the action runs, whereas minimal APIs must opt in explicitly.
 
 ## Prerequisites
 
