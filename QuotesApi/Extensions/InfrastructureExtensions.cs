@@ -71,6 +71,12 @@ public static class InfrastructureExtensions
             .WithTracing(tracing => tracing
                 .AddSource("QuotesApi")
                 .AddAspNetCoreInstrumentation()
+
+                // Emits a span per database command, which is what makes a
+                // query-count problem such as an N+1 visible as repeated
+                // sibling spans under one request rather than as a single slow
+                // parent with no explanation inside it.
+                .AddEntityFrameworkCoreInstrumentation()
                 .AddHttpClientInstrumentation()
                 .AddOtlpExporter());
 
