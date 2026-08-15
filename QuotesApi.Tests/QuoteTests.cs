@@ -89,11 +89,12 @@ public class QuoteTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void Create_WithMissingOwnerId_ThrowsArgumentException(string? ownerId)
+    public void Create_WithMissingOwnerId_ThrowsQuoteDomainException(string? ownerId)
     {
         Action act = () => Quote.Create("Valid author", "Valid text", ownerId!);
 
-        act.Should().Throw<ArgumentException>();
+        act.Should().Throw<QuoteDomainException>()
+            .WithMessage("Quote owner is required.");
     }
 
     [Fact]

@@ -99,6 +99,15 @@ public static class QuoteController
             ILogger<Program> logger,
             CancellationToken cancellationToken) =>
         {
+            var subjectId = user.GetSubjectId();
+
+            // An authenticated token without a subject claim cannot own a
+            // quote. That is an authentication problem, not a bad request.
+            if (string.IsNullOrWhiteSpace(subjectId))
+            {
+                return Results.Unauthorized();
+            }
+
             Quote quote;
 
             try
@@ -106,7 +115,7 @@ public static class QuoteController
                 quote = Quote.Create(
                     request.Author,
                     request.Text,
-                    user.GetSubjectId()!);
+                    subjectId);
             }
             catch (QuoteDomainException ex)
             {

@@ -90,6 +90,12 @@ public static class InfrastructureExtensions
         builder.Services.AddProblemDetails();
         builder.Services.AddHealthChecks();
 
+        // Minimal APIs do not evaluate DataAnnotations on their own the way an
+        // [ApiController] does. This turns the attributes on the request
+        // records into a filter that short-circuits with 400 and a
+        // ValidationProblemDetails body before any handler runs.
+        builder.Services.AddValidation();
+
         // ValidateOnStart forces these checks to run during startup rather than
         // on first use, so a missing key fails the same way a bad one does --
         // immediately, not on the first login attempt.

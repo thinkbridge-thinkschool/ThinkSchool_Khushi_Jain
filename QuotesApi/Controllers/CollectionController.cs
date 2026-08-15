@@ -20,11 +20,18 @@ public static class CollectionController
             ILogger<Program> logger,
             CancellationToken cancellationToken) =>
         {
+            var subjectId = user.GetSubjectId();
+
+            if (string.IsNullOrWhiteSpace(subjectId))
+            {
+                return Results.Unauthorized();
+            }
+
             Collection collection;
 
             try
             {
-                collection = Collection.Create(request.Name, user.GetSubjectId()!);
+                collection = Collection.Create(request.Name, subjectId);
             }
             catch (CollectionDomainException ex)
             {
