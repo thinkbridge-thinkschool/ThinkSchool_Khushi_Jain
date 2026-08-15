@@ -1,129 +1,158 @@
 # ThinkSchool — Khushi Jain
 
 A quotes API built across the Thinkbridge Day 1–5 programme: ASP.NET Core 10 minimal APIs, EF Core,
-self-issued JWT plus Entra ID authentication, structured logging, distributed tracing, and deployment to
-Azure Container Apps.
+self-issued JWT plus Entra ID auth, Serilog, OpenTelemetry, and deployment to Azure Container Apps.
 
-## Projects
+Live: `https://quotes-api.wonderfulplant-5f428237.eastus.azurecontainerapps.io`
 
-| Path | What it is |
-|---|---|
-| `QuotesApi/` | The API — quotes, collections, auth, telemetry |
-| `QuotesApi.Tests/` | Unit and integration tests, including a real SQL Server suite via Testcontainers |
-| `Tests.Domain/` | Aggregate invariant tests. No database, no host, no fixtures |
-| `RefactorOrders/` | The god-method refactor exercise. `Original/OrderController.cs` is the unrefactored file, kept for comparison |
-| `hello-cs/`, `hello-ts/` | Day 1 two-language warm-up |
+## Quick start
 
-### A note on the two `Controllers/` folders
+Requires .NET SDK 10, plus Docker if you want the SQL Server tests to run.
 
-Both projects call their request-handling layer `Controllers/`, but they use different ASP.NET Core
-mechanisms:
-
-- `QuotesApi/Controllers/` holds **minimal-API** route registrations — static classes whose
-  `Map…Endpoints()` extension methods are called from `Program.cs`. They do not derive from
-  `ControllerBase`.
-- `RefactorOrders/Controllers/` holds a conventional **MVC controller** — `[ApiController]`, deriving from
-  `ControllerBase`, with attribute routing. That project exists to demonstrate refactoring a god-method
-  controller, so it is deliberately controller-based.
-
-The practical difference is validation: `[ApiController]` checks model state automatically and returns
-`ValidationProblemDetails` before the action runs, whereas minimal APIs must opt in explicitly.
-
-## Prerequisites
-
-- .NET SDK 10
-- Docker — required for the SQL Server integration tests in `QuotesApi.Tests/SqlServer/`. Without it those
-  tests do not run.
-
-## Getting started
-
-The JWT signing key is deliberately absent from `appsettings.json`. Supply it once, per machine:
+The JWT signing key is deliberately absent from `appsettings.json`. Set it once per machine:
 
 ```bash
 dotnet user-secrets set "Jwt:SigningKey" "$(openssl rand -base64 32)" --project QuotesApi
 ```
 
-On PowerShell:
-
 ```powershell
-$bytes = New-Object byte[] 32
-([System.Security.Cryptography.RNGCryptoServiceProvider]::new()).GetBytes($bytes)
-dotnet user-secrets set "Jwt:SigningKey" ([Convert]::ToBase64String($bytes)) --project QuotesApi
+$b = New-Object byte[] 32
+([System.Security.Cryptography.RNGCryptoServiceProvider]::new()).GetBytes($b)
+dotnet user-secrets set "Jwt:SigningKey" ([Convert]::ToBase64String($b)) --project QuotesApi
 ```
 
-The value must be at least 32 bytes — HS256 needs a 256-bit key, and startup rejects anything shorter with a
-message naming this command. Each developer generates their own; it is never shared and never committed.
-
-To get an account you can log in with locally, also set a starter user. Both values are optional; without them
-the API starts normally and simply has no users, so `POST` and `DELETE` on `/api/quotes` cannot be exercised
-until one is created:
+There is no registration endpoint, so a starter account is the only way to obtain a token locally. Both
+values are optional — without them the API runs but has no users:
 
 ```bash
 dotnet user-secrets set "Seed:AdminEmail" "you@example.com" --project QuotesApi
 dotnet user-secrets set "Seed:AdminPassword" "<choose one>" --project QuotesApi
 ```
 
-This account is seeded only in the Development environment, and only when both values are present.
-
-Then run:
-
 ```bash
 dotnet run --project QuotesApi
 ```
 
-The API listens on `http://localhost:5104` and `https://localhost:7151`. `GET /health` confirms it is up.
-EF Core migrations are applied automatically at startup.
+Listens on `http://localhost:5104`. `GET /health` confirms it is up; EF Core migrations apply at startup.
+User secrets load only in Development — running as Production locally fails by design, since production
+reads its secrets from Key Vault.
 
-User secrets are loaded only in the Development environment. Running locally with
-`ASPNETCORE_ENVIRONMENT=Production` will fail to start, which is intended — production reads its secrets from
-Azure Key Vault.
+## Layout
+
+| Path | What it is |
+|---|---|
+| `QuotesApi/` | The API — quotes, collections, auth, telemetry |
+| `QuotesApi.Tests/` | Unit and integration tests, including a real SQL Server suite via Testcontainers |
+| `Tests.Domain/` | Aggregate invariant tests. No database, no host, no fixtures |
+| `RefactorOrders/` | The god-method refactor exercise. `Original/OrderController.cs` is kept for comparison |
+| `hello-cs/`, `hello-ts/` | Day 1 two-language warm-up |
+| `infra/` | Bicep for Container Apps, ACR, Key Vault, App Insights |
+
+Write-ups live beside the code they describe: `RefactorOrders/REFACTOR_NOTES.md`,
+`RefactorOrders/INITIAL_PROMPT.md`, `RefactorOrders/AI_REFLECTION.md`, `QuotesApi/WHY.md`.
+
+Both `Controllers/` folders use different mechanisms: `QuotesApi/Controllers/` holds minimal-API route
+registrations exposed as `Map…Endpoints()` extensions, while `RefactorOrders/Controllers/` is a real
+`[ApiController]` deriving from `ControllerBase`.
+
+## Day wise task
+
+One row per task. Paths without a project prefix are relative to `QuotesApi/`.
+
+### Day 1 — foundations
+
+| Task | Where |
+|---|---|
+| Tools check | submission only |
+| Hello in two languages | `hello-cs/Program.cs`, `hello-ts/hello.ts` |
+| Minimal API, four quote endpoints | `Controllers/QuoteController.cs`, `Repositories/`, `Migrations/`, `Program.cs` |
+| Refactor a god-method controller | `RefactorOrders/` — `Original/OrderController.cs`, `INITIAL_PROMPT.md`, `REFACTOR_NOTES.md`, `Services/`, `Repositories/` |
+| AI-assisted strategy refactor | `RefactorOrders/Services/IOrderRule.cs`, `DefaultOrderRules.cs`, `AI_REFLECTION.md` |
+| `Collection` aggregate | `Models/Collection.cs`, `CollectionItem.cs`, `Repositories/ICollectionRepository.cs`, `Controllers/CollectionController.cs` |
+
+### Day 2 — depth
+
+| Task | Where |
+|---|---|
+| DI lifetimes and `IClock` | `Extensions/InfrastructureExtensions.cs`, `Time/IClock.cs`, `Time/SystemClock.cs`, `QuotesApi.Tests/FakeClock.cs` |
+| Cancellation through layers | `Controllers/CollectionController.cs`, `Repositories/CollectionRepository.cs`, `QuotesApi.Tests/CollectionRepositoryTests.cs` |
+| Domain-layer tests | `Tests.Domain/CollectionInvariantTests.cs` |
+| Anemic to rich `Quote` | `Models/Quote.cs`, `Models/QuoteDomainException.cs`, `WHY.md` |
+| JWT auth, own issuer | `Controllers/AuthController.cs`, `Services/TokenService.cs`, `Models/User.cs`, `Models/JwtOptions.cs` |
+| Refresh rotation, reuse detection | `Controllers/AuthController.cs`, `Services/RefreshTokenEvaluator.cs`, `Models/RefreshToken.cs` |
+
+### Day 3 — auth and tests
+
+| Task | Where |
+|---|---|
+| Entra ID as a second scheme | `Extensions/InfrastructureExtensions.cs`, `Authorization/AuthenticationSchemeSelector.cs`, `Models/EntraOptions.cs` |
+| Authorization policies and claims | `Authorization/CanModifyOwnQuoteHandler.cs`, `CanModifyOwnQuoteRequirement.cs`, `ClaimsPrincipalExtensions.cs` |
+| Lock down the API end-to-end | `QuotesApi.Tests/QuoteAuthorizationTests.cs` |
+| xUnit with Fluent Assertions | `QuotesApi.Tests/QuoteTests.cs`, `RefreshTokenEvaluatorTests.cs`, `CanModifyOwnQuoteHandlerTests.cs` |
+| WebApplicationFactory integration tests | `QuotesApi.Tests/IntegrationTestBase.cs`, `QuotesApiIntegrationTests.cs`, `CollectionApiTests.cs` |
+| Real SQL Server via Testcontainers | `QuotesApi.Tests/SqlServer/` |
+
+### Day 4 — CI and observability
+
+| Task | Where |
+|---|---|
+| CI with GitHub Actions | `.github/workflows/ci.yml`, `ThinkSchool.slnx` |
+| Coverage gate | `coverlet.runsettings` |
+| Serilog with correlation IDs | `Extensions/ApplicationPipelineExtensions.cs`, `appsettings.json` |
+| OpenTelemetry tracing | `Extensions/InfrastructureExtensions.cs` |
+| Azure App Insights | `Extensions/InfrastructureExtensions.cs`, `infra/resources.bicep` |
+| Configuration and `IOptions` | `Models/JwtOptions.cs`, `Models/EntraOptions.cs`, `Models/SeedOptions.cs` |
+
+### Day 5 — ship it
+
+| Task | Where |
+|---|---|
+| Diagnose a slow endpoint from traces | `docs/day5-tracing/`, `Controllers/QuoteController.cs` |
+| Container image without a Dockerfile | `QuotesApi.csproj` |
+| Azure Container Apps | `infra/resources.bicep` |
+| Deploy via azd | `azure.yaml`, `infra/main.bicep`, `infra/main.parameters.json` |
+| Verify in App Insights with KQL | `docs/day5_KQL/` |
+| Polly resilience | `Resilience/EntraHttpClientExtensions.cs`, `QuotesApi.Tests/EntraResilienceHandlerTests.cs` |
+| Smoke test and Week 1 reflection | submission only |
 
 ## Tests
 
 ```bash
-dotnet test QuotesApi.Tests/QuotesApi.Tests.csproj
+dotnet test ThinkSchool.slnx
 ```
 
-The test hosts supply their own synthetic signing key, so no user-secret is needed to run the suite. Start
-Docker first if you want the SQL Server tests included.
+The test hosts supply their own synthetic signing key, so no user secret is needed. Start Docker first to
+include the SQL Server suite. The domain suite alone runs in milliseconds:
+
+```bash
+dotnet test Tests.Domain/Tests.Domain.csproj
+```
 
 ## Configuration
 
-Configuration resolves in this order, highest first: environment variables, `appsettings.{Environment}.json`,
-`appsettings.json`. Typed sections are bound with the options pattern and injected as `IOptions<T>`.
+Precedence, highest first: environment variables, `appsettings.{Environment}.json`, `appsettings.json`.
+Typed sections bind through the options pattern and are injected as `IOptions<T>`.
 
-Secrets are never stored in `appsettings.json`. Local development uses user secrets; Azure uses Key Vault
-references exposed as environment variables.
+Secrets never live in `appsettings.json` — user secrets locally, Key Vault in Azure.
 
 ## Deployment
-
-Deployed to Azure Container Apps with `azd up`. The infrastructure in `infra/` provisions Application
-Insights, a container registry, a Container Apps environment, a user-assigned managed identity, and a Key
-Vault.
-
-The signing key is supplied once per environment before the first deploy:
 
 ```bash
 azd env set AZURE_JWT_SIGNING_KEY "$(openssl rand -base64 32)"
 azd up
 ```
 
-It is written to Key Vault, and the container receives only the vault's URI. At startup the app reads the
-secret from the vault using its managed identity, so the key value never appears in the container's
-environment, in the Bicep, or in any file in this repository. Use a different key from your local one.
+The key is written to Key Vault. The container receives only the vault's URI and reads the secret at startup
+through its managed identity, so the value never appears in the container's environment, in the Bicep, or in
+this repository. Use a different key from your local one.
 
-### Known limitation: the deployed database is not durable
+## Known gaps
 
-The API uses SQLite, and the deployed container writes its database file to the container's own filesystem.
-No storage is mounted, so every restart, revision, or scale event starts from an empty database — quotes,
-users, and refresh tokens are all lost. The startup migration runs each time and recreates an empty schema.
-
-This is acceptable for the exercise but is not a shape any real deployment should keep. Making it durable
-means either mounting Azure Files and pinning the app to a single replica, or moving to Azure SQL and
-regenerating the migrations for that provider. Neither is done here.
-
-## Security note
-
-An earlier version of this repository committed the JWT signing key to `appsettings.json`. It has been removed
-from the working tree and the key rotated, but the original value remains reachable in Git history and is
-treated as compromised. Any token signed with it should be considered untrusted.
+- **The deployed database is not durable.** SQLite writes to the container's own filesystem with no volume
+  mounted, so every restart, revision, or scale event starts from an empty schema. Fixing it means Azure
+  Files with a single replica, or moving to Azure SQL.
+- **The original JWT signing key is still in Git history.** It has been removed from the working tree and
+  rotated, but the old value remains reachable and is treated as compromised.
+- **Two migration sets are maintained by hand.** `QuotesApi/Migrations/` targets SQLite and
+  `QuotesApi.Tests/SqlServer/Migrations/` targets SQL Server for the Testcontainers suite. Nothing enforces
+  that a new migration lands in both.
