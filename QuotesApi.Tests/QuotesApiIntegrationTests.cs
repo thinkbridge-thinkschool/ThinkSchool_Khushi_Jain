@@ -68,6 +68,49 @@ public sealed class QuotesApiIntegrationTests : IntegrationTestBase
         body.GetProperty("access_token").GetString().Should().NotBeNullOrWhiteSpace();
     }
 
+    /// <summary>
+    /// Reuse detection has to kill the whole family, not just the token that
+    /// was replayed. Asserting only that the replayed token is rejected would
+    /// pass even if the leaked chain's live replacement still worked, which is
+    /// the case that matters: an attacker holding the old token forces the
+    /// legitimate holder's session to be revoked too.
+    /// </summary>
+    [Fact]
+    public async Task Refresh_WhenAReplacedTokenIsReplayed_RevokesTheEntireFamily()
+    {
+        var login = await Client.PostAsJsonAsync(
+            "/api/auth/login",
+            new LoginRequest(
+                TestConfiguration.SeedAdminEmail,
+                TestConfiguration.SeedAdminPassword));
+
+        login.EnsureSuccessStatusCode();
+        var original = (await login.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("refresh_token").GetString()!;
+
+        var rotation = await Client.PostAsJsonAsync(
+            "/api/auth/refresh",
+            new RefreshTokenRequest(original));
+
+        rotation.EnsureSuccessStatusCode();
+        var replacement = (await rotation.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("refresh_token").GetString()!;
+
+        var replay = await Client.PostAsJsonAsync(
+            "/api/auth/refresh",
+            new RefreshTokenRequest(original));
+
+        replay.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        var afterCascade = await Client.PostAsJsonAsync(
+            "/api/auth/refresh",
+            new RefreshTokenRequest(replacement));
+
+        afterCascade.StatusCode.Should().Be(
+            HttpStatusCode.Unauthorized,
+            "the replacement token shares the leaked token's family and must be revoked with it");
+    }
+
     [Fact]
     public async Task Refresh_WithUnknownToken_ReturnsUnauthorized()
     {
