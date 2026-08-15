@@ -22,6 +22,28 @@ namespace QuotesApi.Tests.SqlServer.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("QuotesApi.Models.Collection", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Collections");
+                });
+
             modelBuilder.Entity("QuotesApi.Models.Quote", b =>
                 {
                     b.Property<int>("Id")
@@ -102,6 +124,38 @@ namespace QuotesApi.Tests.SqlServer.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("QuotesApi.Models.Collection", b =>
+                {
+                    b.OwnsMany("QuotesApi.Models.CollectionItem", "Items", b1 =>
+                        {
+                            b1.Property<int>("Id")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("int");
+
+                            SqlServerPropertyBuilderExtensions.UseIdentityColumn(b1.Property<int>("Id"));
+
+                            b1.Property<DateTimeOffset>("AddedAt")
+                                .HasColumnType("datetimeoffset");
+
+                            b1.Property<int>("CollectionId")
+                                .HasColumnType("int");
+
+                            b1.Property<int>("QuoteId")
+                                .HasColumnType("int");
+
+                            b1.HasKey("Id");
+
+                            b1.HasIndex("CollectionId");
+
+                            b1.ToTable("CollectionItems", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("CollectionId");
+                        });
+
+                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("QuotesApi.Models.RefreshToken", b =>
