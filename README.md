@@ -38,6 +38,17 @@ dotnet user-secrets set "Jwt:SigningKey" ([Convert]::ToBase64String($bytes)) --p
 The value must be at least 32 bytes — HS256 needs a 256-bit key, and startup rejects anything shorter with a
 message naming this command. Each developer generates their own; it is never shared and never committed.
 
+To get an account you can log in with locally, also set a starter user. Both values are optional; without them
+the API starts normally and simply has no users, so `POST` and `DELETE` on `/api/quotes` cannot be exercised
+until one is created:
+
+```bash
+dotnet user-secrets set "Seed:AdminEmail" "you@example.com" --project QuotesApi
+dotnet user-secrets set "Seed:AdminPassword" "<choose one>" --project QuotesApi
+```
+
+This account is seeded only in the Development environment, and only when both values are present.
+
 Then run:
 
 ```bash

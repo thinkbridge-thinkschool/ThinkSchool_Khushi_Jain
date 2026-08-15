@@ -45,7 +45,9 @@ public sealed class QuotesApiSqlServerIntegrationTests(SqlServerContainerFixture
     {
         var response = await _client.PostAsJsonAsync(
             "/api/auth/login",
-            new LoginRequest("admin@example.com", "P@ssword1"));
+            new LoginRequest(
+                TestConfiguration.SeedAdminEmail,
+                TestConfiguration.SeedAdminPassword));
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 

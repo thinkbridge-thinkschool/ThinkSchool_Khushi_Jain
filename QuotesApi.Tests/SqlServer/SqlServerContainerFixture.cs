@@ -38,7 +38,7 @@ public sealed class SqlServerContainerFixture : IAsyncLifetime
             {
                 builder.UseEnvironment("Development");
 
-                builder.UseSetting("Jwt:SigningKey", TestConfiguration.JwtSigningKey);
+                builder.UseTestSecrets();
 
                 builder.ConfigureTestServices(services =>
                 {

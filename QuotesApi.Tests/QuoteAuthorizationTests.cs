@@ -44,7 +44,7 @@ public sealed class QuoteAuthorizationTests : IAsyncLifetime
                     "ConnectionStrings:DefaultConnection",
                     $"Data Source={_dbPath}");
 
-                builder.UseSetting("Jwt:SigningKey", TestConfiguration.JwtSigningKey);
+                builder.UseTestSecrets();
             });
 
         _client = _factory.CreateClient();
@@ -188,8 +188,8 @@ public sealed class QuoteAuthorizationTests : IAsyncLifetime
         var loginResponse = await _client.PostAsJsonAsync(
             "/api/auth/login",
             new LoginRequest(
-                "admin@example.com",
-                "P@ssword1"));
+                TestConfiguration.SeedAdminEmail,
+                TestConfiguration.SeedAdminPassword));
 
         loginResponse.EnsureSuccessStatusCode();
 

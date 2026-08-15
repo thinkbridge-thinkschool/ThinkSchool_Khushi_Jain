@@ -46,7 +46,7 @@ public abstract class IntegrationTestBase : IAsyncLifetime
                     "ConnectionStrings:DefaultConnection",
                     $"Data Source={_dbPath}");
 
-                builder.UseSetting("Jwt:SigningKey", TestConfiguration.JwtSigningKey);
+                builder.UseTestSecrets();
 
                 builder.ConfigureTestServices(services =>
                 {

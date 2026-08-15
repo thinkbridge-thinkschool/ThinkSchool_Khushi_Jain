@@ -88,6 +88,8 @@ builder.Services.AddOptions<JwtOptions>()
         "Jwt:Audience is required.")
     .ValidateOnStart();
 
+builder.Services.Configure<SeedOptions>(builder.Configuration.GetSection("Seed"));
+
 // AddJwtBearer below wires up authentication middleware itself, which
 // happens before builder.Build() -- too early to resolve IOptions<JwtOptions>
 // from the DI container. This one bootstrap read binds directly from
@@ -270,16 +272,36 @@ using (var scope = app.Services.CreateScope())
 
     await db.Database.MigrateAsync();
 
-    if (!await db.Users.AnyAsync())
+    // Migrations run everywhere; the starter account does not. Outside
+    // Development, accounts are created through the normal auth flow.
+    if (app.Environment.IsDevelopment())
     {
-        db.Users.Add(new User
-        {
-            Email = "admin@example.com",
-            PasswordHash =
-                BCrypt.Net.BCrypt.HashPassword("P@ssword1")
-        });
+        var seedOptions = scope.ServiceProvider
+            .GetRequiredService<IOptions<SeedOptions>>()
+            .Value;
 
-        await db.SaveChangesAsync();
+        var seedLogger = scope.ServiceProvider
+            .GetRequiredService<ILogger<Program>>();
+
+        if (!seedOptions.IsConfigured)
+        {
+            seedLogger.LogInformation(
+                "Starter account not seeded: set Seed:AdminEmail and Seed:AdminPassword " +
+                "in user secrets to create one.");
+        }
+        else if (!await db.Users.AnyAsync(u => u.Email == seedOptions.AdminEmail))
+        {
+            db.Users.Add(new User
+            {
+                Email = seedOptions.AdminEmail,
+                PasswordHash =
+                    BCrypt.Net.BCrypt.HashPassword(seedOptions.AdminPassword)
+            });
+
+            await db.SaveChangesAsync();
+
+            seedLogger.LogInformation("Starter account seeded.");
+        }
     }
 }
 

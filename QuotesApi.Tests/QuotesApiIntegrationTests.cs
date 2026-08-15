@@ -21,7 +21,9 @@ public sealed class QuotesApiIntegrationTests : IntegrationTestBase
     {
         var response = await Client.PostAsJsonAsync(
             "/api/auth/login",
-            new LoginRequest("admin@example.com", "P@ssword1"));
+            new LoginRequest(
+                TestConfiguration.SeedAdminEmail,
+                TestConfiguration.SeedAdminPassword));
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -35,7 +37,7 @@ public sealed class QuotesApiIntegrationTests : IntegrationTestBase
     {
         var response = await Client.PostAsJsonAsync(
             "/api/auth/login",
-            new LoginRequest("admin@example.com", "wrong-password"));
+            new LoginRequest(TestConfiguration.SeedAdminEmail, "wrong-password"));
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
@@ -241,7 +243,9 @@ public sealed class QuotesApiIntegrationTests : IntegrationTestBase
     {
         var response = await Client.PostAsJsonAsync(
             "/api/auth/login",
-            new LoginRequest("admin@example.com", "P@ssword1"));
+            new LoginRequest(
+                TestConfiguration.SeedAdminEmail,
+                TestConfiguration.SeedAdminPassword));
 
         response.EnsureSuccessStatusCode();
 
