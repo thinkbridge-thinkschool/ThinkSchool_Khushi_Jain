@@ -38,6 +38,8 @@ public sealed class SqlServerContainerFixture : IAsyncLifetime
             {
                 builder.UseEnvironment("Development");
 
+                builder.UseSetting("Jwt:SigningKey", TestConfiguration.JwtSigningKey);
+
                 builder.ConfigureTestServices(services =>
                 {
                     // Program.cs already registered QuotesDbContext against Sqlite.

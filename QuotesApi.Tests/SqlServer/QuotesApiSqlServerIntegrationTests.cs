@@ -128,7 +128,7 @@ public sealed class QuotesApiSqlServerIntegrationTests(SqlServerContainerFixture
             claims: claims,
             expires: DateTime.UtcNow.AddMinutes(5),
             signingCredentials: new SigningCredentials(
-                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Key)),
+                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SigningKey)),
                 SecurityAlgorithms.HmacSha256));
 
         return new JwtSecurityTokenHandler().WriteToken(token);

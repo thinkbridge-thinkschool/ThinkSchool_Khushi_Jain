@@ -46,6 +46,8 @@ public abstract class IntegrationTestBase : IAsyncLifetime
                     "ConnectionStrings:DefaultConnection",
                     $"Data Source={_dbPath}");
 
+                builder.UseSetting("Jwt:SigningKey", TestConfiguration.JwtSigningKey);
+
                 builder.ConfigureTestServices(services =>
                 {
                     services.AddSingleton<IClock>(Clock);
@@ -103,7 +105,7 @@ public abstract class IntegrationTestBase : IAsyncLifetime
             claims: claims,
             expires: expiresAt ?? DateTime.UtcNow.AddMinutes(5),
             signingCredentials: new SigningCredentials(
-                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Key)),
+                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SigningKey)),
                 SecurityAlgorithms.HmacSha256));
 
         return new JwtSecurityTokenHandler().WriteToken(token);

@@ -79,9 +79,13 @@ builder.Services.AddHealthChecks();
 // way a missing one does -- immediately, not on the first login attempt.
 builder.Services.AddOptions<JwtOptions>()
     .Bind(builder.Configuration.GetSection("Jwt"))
+    .Validate(options => options.HasSigningKey, JwtOptions.MissingKeyMessage)
     .Validate(
-        options => Encoding.UTF8.GetByteCount(options.Key) >= 32,
-        "JWT key must be at least 256 bits.")
+        options => !string.IsNullOrWhiteSpace(options.Issuer),
+        "Jwt:Issuer is required.")
+    .Validate(
+        options => !string.IsNullOrWhiteSpace(options.Audience),
+        "Jwt:Audience is required.")
     .ValidateOnStart();
 
 // AddJwtBearer below wires up authentication middleware itself, which
@@ -91,7 +95,15 @@ builder.Services.AddOptions<JwtOptions>()
 var jwtBootstrapOptions = builder.Configuration.GetSection("Jwt").Get<JwtOptions>()
     ?? throw new InvalidOperationException("JWT configuration is missing.");
 
-var jwtSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtBootstrapOptions.Key));
+// This read happens before ValidateOnStart gets a chance to run, so the same
+// rule is applied here. Without it a missing key surfaces further down as an
+// opaque "key length is zero" failure from SymmetricSecurityKey.
+if (!jwtBootstrapOptions.HasSigningKey)
+{
+    throw new InvalidOperationException(JwtOptions.MissingKeyMessage);
+}
+
+var jwtSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtBootstrapOptions.SigningKey));
 
 var entraOptions = builder.Configuration
     .GetSection("Entra")
@@ -700,7 +712,7 @@ static string CreateAccessToken(
             new SigningCredentials(
                 new SymmetricSecurityKey(
                     Encoding.UTF8.GetBytes(
-                        jwtOptions.Key)),
+                        jwtOptions.SigningKey)),
                 SecurityAlgorithms.HmacSha256));
 
     return new JwtSecurityTokenHandler()

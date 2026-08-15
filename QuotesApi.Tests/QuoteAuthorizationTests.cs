@@ -43,6 +43,8 @@ public sealed class QuoteAuthorizationTests : IAsyncLifetime
                 builder.UseSetting(
                     "ConnectionStrings:DefaultConnection",
                     $"Data Source={_dbPath}");
+
+                builder.UseSetting("Jwt:SigningKey", TestConfiguration.JwtSigningKey);
             });
 
         _client = _factory.CreateClient();
@@ -175,7 +177,7 @@ public sealed class QuoteAuthorizationTests : IAsyncLifetime
             claims: claims,
             expires: expiresAt ?? DateTime.UtcNow.AddMinutes(5),
             signingCredentials: new SigningCredentials(
-                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Key)),
+                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SigningKey)),
                 SecurityAlgorithms.HmacSha256));
 
         return new JwtSecurityTokenHandler().WriteToken(token);
