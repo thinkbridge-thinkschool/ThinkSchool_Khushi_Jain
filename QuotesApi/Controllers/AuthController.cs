@@ -4,6 +4,7 @@ using QuotesApi.Contracts;
 using QuotesApi.Data;
 using QuotesApi.Models;
 using QuotesApi.Services;
+using QuotesApi.Time;
 
 namespace QuotesApi.Controllers;
 
@@ -19,6 +20,7 @@ public static class AuthController
             LoginRequest request,
             QuotesDbContext db,
             TokenService tokens,
+            IClock clock,
             CancellationToken cancellationToken) =>
         {
             var user = await db.Users
@@ -38,7 +40,7 @@ public static class AuthController
             {
                 TokenHash = tokens.HashRefreshToken(refreshToken),
                 UserId = user.Id,
-                ExpiresAt = DateTimeOffset.UtcNow.Add(RefreshTokenLifetime),
+                ExpiresAt = clock.UtcNow.Add(RefreshTokenLifetime),
 
                 // A fresh login starts a new family. Rotation keeps the family
                 // id, which is what lets reuse detection revoke every
@@ -61,6 +63,7 @@ public static class AuthController
             QuotesDbContext db,
             TokenService tokens,
             RefreshTokenEvaluator refreshTokenEvaluator,
+            IClock clock,
             ActivitySource activitySource,
             ILogger<Program> logger,
             CancellationToken cancellationToken) =>
@@ -101,7 +104,7 @@ public static class AuthController
 
                 foreach (var token in familyTokens)
                 {
-                    token.RevokedAt ??= DateTimeOffset.UtcNow;
+                    token.RevokedAt ??= clock.UtcNow;
                 }
 
                 await db.SaveChangesAsync(cancellationToken);
@@ -117,14 +120,14 @@ public static class AuthController
             var newRefreshToken = tokens.GenerateRefreshToken();
             var newRefreshTokenHash = tokens.HashRefreshToken(newRefreshToken);
 
-            storedToken.RevokedAt = DateTimeOffset.UtcNow;
+            storedToken.RevokedAt = clock.UtcNow;
             storedToken.ReplacedByTokenHash = newRefreshTokenHash;
 
             db.RefreshTokens.Add(new RefreshToken
             {
                 TokenHash = newRefreshTokenHash,
                 UserId = storedToken.UserId,
-                ExpiresAt = DateTimeOffset.UtcNow.Add(RefreshTokenLifetime),
+                ExpiresAt = clock.UtcNow.Add(RefreshTokenLifetime),
                 FamilyId = storedToken.FamilyId
             });
 
@@ -144,6 +147,7 @@ public static class AuthController
             RefreshTokenRequest request,
             QuotesDbContext db,
             TokenService tokens,
+            IClock clock,
             CancellationToken cancellationToken) =>
         {
             var tokenHash = tokens.HashRefreshToken(request.RefreshToken);
@@ -158,7 +162,7 @@ public static class AuthController
                 return Results.NoContent();
             }
 
-            storedToken.RevokedAt ??= DateTimeOffset.UtcNow;
+            storedToken.RevokedAt ??= clock.UtcNow;
 
             await db.SaveChangesAsync(cancellationToken);
 

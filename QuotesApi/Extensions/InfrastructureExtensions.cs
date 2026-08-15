@@ -232,9 +232,15 @@ public static class InfrastructureExtensions
 
     private static void AddPersistence(this WebApplicationBuilder builder)
     {
+        // Singleton: no state, no per-request dependencies, and safe to share
+        // for the life of the app.
         builder.Services.AddSingleton<IClock, SystemClock>();
         builder.Services.AddSingleton<RefreshTokenEvaluator>();
-        builder.Services.AddSingleton<TokenService>();
+
+        // Transient: stateless, but each call builds a JwtSecurityTokenHandler,
+        // so a fresh instance per resolution avoids sharing that machinery
+        // across concurrent requests.
+        builder.Services.AddTransient<TokenService>();
 
         var connectionString =
             builder.Configuration.GetConnectionString("DefaultConnection")

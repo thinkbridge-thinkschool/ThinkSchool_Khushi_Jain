@@ -5,6 +5,7 @@ using System.Text;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using QuotesApi.Models;
+using QuotesApi.Time;
 
 namespace QuotesApi.Services;
 
@@ -14,7 +15,7 @@ namespace QuotesApi.Services;
 /// stored only as a SHA-256 hash, so a database leak does not yield usable
 /// tokens.
 /// </summary>
-public sealed class TokenService(IOptions<JwtOptions> jwtOptions)
+public sealed class TokenService(IOptions<JwtOptions> jwtOptions, IClock clock)
 {
     private readonly JwtOptions _options = jwtOptions.Value;
 
@@ -35,7 +36,7 @@ public sealed class TokenService(IOptions<JwtOptions> jwtOptions)
             issuer: _options.Issuer,
             audience: _options.Audience,
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(_options.AccessTokenMinutes),
+            expires: clock.UtcNow.UtcDateTime.AddMinutes(_options.AccessTokenMinutes),
             signingCredentials: new SigningCredentials(
                 new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SigningKey)),
                 SecurityAlgorithms.HmacSha256));
