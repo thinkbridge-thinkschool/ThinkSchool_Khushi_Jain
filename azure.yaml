@@ -8,9 +8,6 @@ services:
         project: QuotesApi
         host: containerapp
         language: dotnet
-        env:
-            ASPNETCORE_ENVIRONMENT: Development
-            ConnectionStrings__DefaultConnection: "Data Source=/tmp/quotes.db"
 resources:
     quotes-api:
         type: host.containerapp

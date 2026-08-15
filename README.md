@@ -79,6 +79,33 @@ Configuration resolves in this order, highest first: environment variables, `app
 Secrets are never stored in `appsettings.json`. Local development uses user secrets; Azure uses Key Vault
 references exposed as environment variables.
 
+## Deployment
+
+Deployed to Azure Container Apps with `azd up`. The infrastructure in `infra/` provisions Application
+Insights, a container registry, a Container Apps environment, a user-assigned managed identity, and a Key
+Vault.
+
+The signing key is supplied once per environment before the first deploy:
+
+```bash
+azd env set AZURE_JWT_SIGNING_KEY "$(openssl rand -base64 32)"
+azd up
+```
+
+It is written to Key Vault, and the container receives only the vault's URI. At startup the app reads the
+secret from the vault using its managed identity, so the key value never appears in the container's
+environment, in the Bicep, or in any file in this repository. Use a different key from your local one.
+
+### Known limitation: the deployed database is not durable
+
+The API uses SQLite, and the deployed container writes its database file to the container's own filesystem.
+No storage is mounted, so every restart, revision, or scale event starts from an empty database — quotes,
+users, and refresh tokens are all lost. The startup migration runs each time and recreates an empty schema.
+
+This is acceptable for the exercise but is not a shape any real deployment should keep. Making it durable
+means either mounting Azure Files and pinning the app to a single replica, or moving to Azure SQL and
+regenerating the migrations for that provider. Neither is done here.
+
 ## Security note
 
 An earlier version of this repository committed the JWT signing key to `appsettings.json`. It has been removed
