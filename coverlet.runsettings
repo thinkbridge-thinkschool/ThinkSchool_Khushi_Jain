@@ -8,6 +8,25 @@
           <Threshold>70</Threshold>
           <ThresholdType>line</ThresholdType>
           <ThresholdStat>total</ThresholdStat>
+
+          <!--
+            The gate measures the API. RefactorOrders is a separate exercise
+            whose Original/ folder is deliberately-bad reference code that is
+            never executed; counting it would drag the figure down for a reason
+            unrelated to the API's test quality. Its tests still run and still
+            fail the build if they break.
+          -->
+          <Exclude>[RefactorOrders]*,[RefactorOrders.Tests]*,[hello-cs]*</Exclude>
+
+          <!--
+            EF Core scaffolds migrations, designer files and the model snapshot.
+            They execute at startup, so they were being counted as covered
+            production code and inflating the percentage with machine-written
+            lines nobody tested.
+          -->
+          <ExcludeByFile>**/Migrations/*.cs</ExcludeByFile>
+
+          <ExcludeByAttribute>GeneratedCodeAttribute,CompilerGeneratedAttribute,ExcludeFromCodeCoverageAttribute</ExcludeByAttribute>
         </Configuration>
       </DataCollector>
     </DataCollectors>

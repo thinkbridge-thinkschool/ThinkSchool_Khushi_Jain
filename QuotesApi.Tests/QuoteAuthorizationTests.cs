@@ -36,7 +36,7 @@ public sealed class QuoteAuthorizationTests : IAsyncLifetime
             {
                 builder.UseEnvironment("Development");
 
-                // Program.cs reads ConnectionStrings:DefaultConnection before
+                // AddInfrastructure reads ConnectionStrings:DefaultConnection before
                 // builder.Build() runs, so ConfigureAppConfiguration (which only
                 // merges at Build() time) arrives too late to affect it.
                 // UseSetting is folded into configuration immediately.
