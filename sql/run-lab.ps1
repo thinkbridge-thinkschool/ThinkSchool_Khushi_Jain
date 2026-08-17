@@ -35,8 +35,29 @@ $ErrorActionPreference = 'Stop'
 
 $root        = $PSScriptRoot
 $composeFile = Join-Path $root 'docker-compose.yml'
-$resultsDir  = Join-Path $root 'day7-joins-and-ctes\results'
 $container   = 'quoteslab-sql'
+
+# One results directory per exercise piece. The schema and seed output lands
+# with the joins piece rather than in a directory of its own, because that is
+# where it was first captured and the folder has already been handed to a
+# mentor as a link.
+$joinsResults  = Join-Path $root 'day7-joins-and-ctes\results'
+$windowResults = Join-Path $root 'day7-window-functions\results'
+
+function Invoke-Native {
+    # docker writes progress and diagnostics to stderr as a matter of course.
+    # If the caller has merged the streams -- ./run-lab.ps1 2>&1 > log.txt, or
+    # most CI log capture -- PowerShell 5.1 wraps each of those lines in an
+    # ErrorRecord, and $ErrorActionPreference = 'Stop' then treats ordinary
+    # progress output as a fatal error. Every caller below checks $LASTEXITCODE
+    # explicitly, so the preference was never doing the work here anyway.
+    param([Parameter(Mandatory)] [scriptblock] $Command)
+
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try     { & $Command }
+    finally { $ErrorActionPreference = $previous }
+}
 
 function Invoke-Compose {
     # Arguments are passed as an explicit array rather than as remaining
@@ -44,7 +65,7 @@ function Invoke-Compose {
     # as parameters of this function and fail.
     param([Parameter(Mandatory)] [string[]] $Arguments)
 
-    & docker compose -f $composeFile @Arguments
+    Invoke-Native { & docker compose -f $composeFile @Arguments }
     if ($LASTEXITCODE -ne 0) {
         throw "docker compose $($Arguments -join ' ') failed with exit code $LASTEXITCODE."
     }
@@ -53,7 +74,7 @@ function Invoke-Compose {
 function Invoke-InContainer {
     param([Parameter(Mandatory)] [string] $ShellCommand)
 
-    & docker compose -f $composeFile exec -T sql /bin/sh -c $ShellCommand
+    Invoke-Native { & docker compose -f $composeFile exec -T sql /bin/sh -c $ShellCommand }
 }
 
 if ($Stop) {
@@ -84,7 +105,7 @@ Invoke-Compose -Arguments @('up', '-d')
 # number of seconds; a cold first start is much slower than a warm restart.
 $deadline = (Get-Date).AddMinutes(3)
 while ($true) {
-    $state = & docker inspect -f '{{.State.Health.Status}}' $container
+    $state = Invoke-Native { & docker inspect -f '{{.State.Health.Status}}' $container }
     if ($LASTEXITCODE -ne 0) { $state = 'unknown' }
     $state = ($state | Select-Object -First 1)
 
@@ -103,8 +124,10 @@ while ($true) {
 }
 Write-Host 'SQL Server is healthy.'
 
-if (-not (Test-Path $resultsDir)) {
-    New-Item -ItemType Directory -Path $resultsDir | Out-Null
+foreach ($dir in @($joinsResults, $windowResults)) {
+    if (-not (Test-Path $dir)) {
+        New-Item -ItemType Directory -Path $dir | Out-Null
+    }
 }
 
 # Resolve sqlcmd once. The 2022 image ships mssql-tools18; older tags ship
@@ -125,10 +148,11 @@ $sqlcmd = $sqlcmd.Trim()
 function Invoke-SqlScript {
     param(
         [Parameter(Mandatory)] [string] $ContainerPath,
+        [Parameter(Mandatory)] [string] $ResultDirectory,
         [Parameter(Mandatory)] [string] $ResultFileName
     )
 
-    $outputPath = Join-Path $resultsDir $ResultFileName
+    $outputPath = Join-Path $ResultDirectory $ResultFileName
     Write-Host ''
     Write-Host "Running $ContainerPath -> $ResultFileName"
 
@@ -150,8 +174,8 @@ function Invoke-SqlScript {
     }
 }
 
-Invoke-SqlScript -ContainerPath '/sql/schema/01_schema.sql' -ResultFileName '01_schema.txt'
-Invoke-SqlScript -ContainerPath '/sql/schema/02_seed.sql'   -ResultFileName '02_seed.txt'
+Invoke-SqlScript -ContainerPath '/sql/schema/01_schema.sql' -ResultDirectory $joinsResults -ResultFileName '01_schema.txt'
+Invoke-SqlScript -ContainerPath '/sql/schema/02_seed.sql'   -ResultDirectory $joinsResults -ResultFileName '02_seed.txt'
 
 if ($SchemaOnly) {
     Write-Host ''
@@ -159,11 +183,15 @@ if ($SchemaOnly) {
     return
 }
 
-Invoke-SqlScript -ContainerPath '/sql/day7-joins-and-ctes/03_joins.sql'                -ResultFileName '03_joins.txt'
-Invoke-SqlScript -ContainerPath '/sql/day7-joins-and-ctes/04_author_quote_summary.sql' -ResultFileName '04_author_quote_summary.txt'
-Invoke-SqlScript -ContainerPath '/sql/day7-joins-and-ctes/05_recursive_cte.sql'        -ResultFileName '05_recursive_cte.txt'
-Invoke-SqlScript -ContainerPath '/sql/day7-joins-and-ctes/06_plans.sql'                -ResultFileName '06_plans.txt'
+Invoke-SqlScript -ContainerPath '/sql/day7-joins-and-ctes/03_joins.sql'                -ResultDirectory $joinsResults -ResultFileName '03_joins.txt'
+Invoke-SqlScript -ContainerPath '/sql/day7-joins-and-ctes/04_author_quote_summary.sql' -ResultDirectory $joinsResults -ResultFileName '04_author_quote_summary.txt'
+Invoke-SqlScript -ContainerPath '/sql/day7-joins-and-ctes/05_recursive_cte.sql'        -ResultDirectory $joinsResults -ResultFileName '05_recursive_cte.txt'
+Invoke-SqlScript -ContainerPath '/sql/day7-joins-and-ctes/06_plans.sql'                -ResultDirectory $joinsResults -ResultFileName '06_plans.txt'
+
+Invoke-SqlScript -ContainerPath '/sql/day7-window-functions/07_window_functions.sql'   -ResultDirectory $windowResults -ResultFileName '07_window_functions.txt'
 
 Write-Host ''
-Write-Host "Done. Result sets written to $resultsDir"
+Write-Host "Done. Result sets written to:"
+Write-Host "  $joinsResults"
+Write-Host "  $windowResults"
 Write-Host 'Remove the container with: ./run-lab.ps1 -Stop'

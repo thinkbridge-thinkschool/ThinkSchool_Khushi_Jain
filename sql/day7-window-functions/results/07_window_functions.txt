@@ -1,0 +1,177 @@
+﻿Changed database context to 'QuotesLab'.
+=== 0.  Compatibility level (WINDOW clause needs 160) ===
+DatabaseName|CompatibilityLevel
+------------|------------------
+QuotesLab|160
+=== 1.  Per author, each quote, running count, days since previous ===
+Author|QuoteId|CreatedAt|QuoteNumber|RunningCount|PreviousQuoteAt|DaysSincePrevious|Quote
+------|-------|---------|-----------|------------|---------------|-----------------|-----
+Ada Lovelace|22|2026-07-04 10:00:00|1|1|NULL|NULL|A machine follows the argument, never the in
+Ada Lovelace|23|2026-07-04 10:00:00|2|2|2026-07-04 10:00:00|0|Notation is the first optimisation.
+Alan Turing|26|2026-05-09 10:35:00|1|1|NULL|NULL|Every decidable question is one that somebod
+Alan Turing|27|2026-06-05 16:05:00|2|2|2026-05-09 10:35:00|27|The machine is indifferent to your metaphor 
+Alan Turing|28|2026-06-27 09:55:00|3|3|2026-06-05 16:05:00|22|A shorter proof is usually a better algorith
+Alan Turing|29|2026-07-19 13:40:00|4|4|2026-06-27 09:55:00|22|Imitation is a test, not a compliment.
+Alan Turing|30|2026-08-11 07:30:00|5|5|2026-07-19 13:40:00|23|A question worth asking survives a precise p
+Aristotle|1|2026-05-04 08:10:00|1|1|NULL|NULL|Excellence is a habit before it is an outcom
+Aristotle|2|2026-05-19 14:22:00|2|2|2026-05-04 08:10:00|15|A conclusion is only as sound as the premise
+Aristotle|3|2026-06-11 09:05:00|3|3|2026-05-19 14:22:00|23|The mean is not the average; it is the fitti
+Aristotle|4|2026-07-22 16:40:00|4|4|2026-06-11 09:05:00|41|Naming a thing well is half of understanding
+Barbara Liskov|58|2026-05-11 09:15:00|1|1|NULL|NULL|A subtype must be usable wherever its base i
+Barbara Liskov|59|2026-06-06 13:50:00|2|2|2026-05-11 09:15:00|26|A module boundary you cannot state in a sent
+Barbara Liskov|60|2026-07-02 10:25:00|3|3|2026-06-06 13:50:00|26|Abstraction earns its keep the second time i
+Barbara Liskov|61|2026-07-27 15:10:00|4|4|2026-07-02 10:25:00|25|A replicated system is an agreement problem 
+Barbara Liskov|62|2026-08-08 08:05:00|5|5|2026-07-27 15:10:00|12|The interface is the contract; the code is o
+C. A. R. Hoare|68|2026-05-08 08:25:00|1|1|NULL|NULL|Partition first; the ordering falls out of t
+C. A. R. Hoare|69|2026-05-30 12:05:00|2|2|2026-05-08 08:25:00|22|A null reference is an absent value that for
+C. A. R. Hoare|70|2026-06-16 10:45:00|3|3|2026-05-30 12:05:00|17|Obvious correctness and no obvious defects a
+C. A. R. Hoare|71|2026-07-03 15:20:00|4|4|2026-06-16 10:45:00|17|Processes that communicate are easier to rea
+C. A. R. Hoare|72|2026-07-20 09:35:00|5|5|2026-07-03 15:20:00|17|A design review is cheaper than a post-morte
+C. A. R. Hoare|73|2026-08-04 13:15:00|6|6|2026-07-20 09:35:00|15|A type system is a conversation held before 
+C. A. R. Hoare|74|2026-08-15 07:50:00|7|7|2026-08-04 13:15:00|11|The average of a good algorithm still has a 
+Confucius|5|2026-05-07 11:30:00|1|1|NULL|NULL|Correct the small fault today or inherit it 
+Confucius|6|2026-06-25 07:45:00|2|2|2026-05-07 11:30:00|49|Study without reflection is copying.
+Confucius|7|2026-08-02 18:15:00|3|3|2026-06-25 07:45:00|38|Ask the question you are afraid answers you.
+Donald Knuth|49|2026-05-05 08:30:00|1|1|NULL|NULL|Measure before you mourn the constant factor
+Donald Knuth|50|2026-05-18 10:10:00|2|2|2026-05-05 08:30:00|13|A closed form is a compliment the problem pa
+Donald Knuth|51|2026-06-01 09:40:00|3|3|2026-05-18 10:10:00|14|Premature certainty costs more than prematur
+Donald Knuth|52|2026-06-13 14:20:00|4|4|2026-06-01 09:40:00|12|Programs are written for people and merely t
+Donald Knuth|53|2026-06-26 16:00:00|5|5|2026-06-13 14:20:00|13|Typesetting is an argument about attention.
+Donald Knuth|54|2026-07-08 08:55:00|6|6|2026-06-26 16:00:00|12|The average case is a story about your input
+Donald Knuth|55|2026-07-21 12:30:00|7|7|2026-07-08 08:55:00|13|A generating function turns counting into al
+Donald Knuth|56|2026-08-01 11:45:00|8|8|2026-07-21 12:30:00|11|Proved is not the same as run, and both are 
+Donald Knuth|57|2026-08-14 13:00:00|9|9|2026-08-01 11:45:00|13|Analysis without a machine is a hypothesis.
+Edsger W. Dijkstra|35|2026-05-01 08:00:00|1|1|NULL|NULL|Simplicity is bought, and the price is think
+Edsger W. Dijkstra|36|2026-05-06 09:20:00|2|2|2026-05-01 08:00:00|5|An algorithm you cannot argue about, you can
+Edsger W. Dijkstra|37|2026-05-13 10:40:00|3|3|2026-05-06 09:20:00|7|A construct that surprises the reader has co
+Edsger W. Dijkstra|38|2026-05-20 12:00:00|4|4|2026-05-13 10:40:00|7|Proof is the only review that never gets tir
+Edsger W. Dijkstra|39|2026-05-27 13:15:00|5|5|2026-05-20 12:00:00|7|Two threads and one assumption make three ou
+Edsger W. Dijkstra|40|2026-06-03 08:45:00|6|6|2026-05-27 13:15:00|7|Abstraction is precision at a distance, not 
+Edsger W. Dijkstra|41|2026-06-10 15:30:00|7|7|2026-06-03 08:45:00|7|Complexity that is merely hidden is complexi
+Edsger W. Dijkstra|42|2026-06-17 11:05:00|8|8|2026-06-10 15:30:00|7|A schedule is an opinion until the hard part
+Edsger W. Dijkstra|43|2026-06-24 16:50:00|9|9|2026-06-17 11:05:00|7|Every convenience in a language is a tax on 
+Edsger W. Dijkstra|44|2026-07-01 07:35:00|10|10|2026-06-24 16:50:00|7|Ordering is a design decision, not a runtime
+Edsger W. Dijkstra|45|2026-07-15 14:25:00|11|11|2026-07-01 07:35:00|14|The bug you cannot reproduce is the design y
+Edsger W. Dijkstra|46|2026-08-16 09:10:00|12|12|2026-07-15 14:25:00|32|Elegance is what remains once the special ca
+Emmy Noether|82|2026-06-21 10:30:00|1|1|NULL|NULL|Every symmetry is a conservation law waiting
+Frederick P. Brooks Jr.|75|2026-05-03 10:20:00|1|1|NULL|NULL|A late project absorbs new people the way sa
+Frederick P. Brooks Jr.|76|2026-05-25 14:35:00|2|2|2026-05-03 10:20:00|22|The second system is where restraint goes to
+Frederick P. Brooks Jr.|77|2026-06-12 08:15:00|3|3|2026-05-25 14:35:00|18|The first build is a question; only the seco
+Frederick P. Brooks Jr.|78|2026-06-30 16:25:00|4|4|2026-06-12 08:15:00|18|Conceptual integrity survives committees onl
+Frederick P. Brooks Jr.|79|2026-07-14 11:55:00|5|5|2026-06-30 16:25:00|14|Estimates are confidence intervals that lost
+Frederick P. Brooks Jr.|80|2026-08-03 09:45:00|6|6|2026-07-14 11:55:00|20|No single technique doubles productivity; se
+Frederick P. Brooks Jr.|81|2026-08-12 14:05:00|7|7|2026-08-03 09:45:00|9|Documentation is the part of a design that o
+Grace Hopper|31|2026-05-17 11:15:00|1|1|NULL|NULL|A language people can read is a language peo
+Grace Hopper|32|2026-06-14 14:45:00|2|2|2026-05-17 11:15:00|28|Permission is the slowest dependency in any 
+Grace Hopper|33|2026-07-06 09:30:00|3|3|2026-06-14 14:45:00|22|Precedent is not a requirement, however loud
+Grace Hopper|34|2026-08-13 15:20:00|4|4|2026-07-06 09:30:00|38|A nanosecond is a length before it is a dura
+Jane Austen|12|2026-05-15 13:05:00|1|1|NULL|NULL|Character shows in what a person finds unrem
+Jane Austen|13|2026-06-18 15:35:00|2|2|2026-05-15 13:05:00|34|Manners are the interface; motives are the i
+Jane Austen|14|2026-07-30 11:20:00|3|3|2026-06-18 15:35:00|42|A good sentence earns its second clause.
+Leslie Lamport|63|2026-05-23 11:40:00|1|1|NULL|NULL|In a distributed system, the machine you for
+Leslie Lamport|64|2026-06-09 09:25:00|2|2|2026-05-23 11:40:00|17|Time is a partial order that everyone insist
+Leslie Lamport|65|2026-07-05 14:55:00|3|3|2026-06-09 09:25:00|26|If you cannot write the invariant, you are g
+Leslie Lamport|66|2026-07-28 10:15:00|4|4|2026-07-05 14:55:00|23|A specification is a program you are allowed
+Leslie Lamport|67|2026-08-10 16:35:00|5|5|2026-07-28 10:15:00|13|Consensus is expensive because disagreement 
+Marcus Aurelius|8|2026-05-12 06:00:00|1|1|NULL|NULL|What blocks the road is the road.
+Marcus Aurelius|9|2026-06-02 06:30:00|2|2|2026-05-12 06:00:00|21|Begin before you feel ready; readiness is a 
+Marcus Aurelius|10|2026-07-09 20:10:00|3|3|2026-06-02 06:30:00|37|You do not control the tide, only the boat.
+Marcus Aurelius|11|2026-08-05 05:55:00|4|4|2026-07-09 20:10:00|27|Complaint is the most expensive way to pass 
+Marie Curie|24|2026-05-26 08:20:00|1|1|NULL|NULL|Measure twice, because the instrument lies o
+Marie Curie|25|2026-07-13 14:10:00|2|2|2026-05-26 08:20:00|48|Curiosity outlasts funding, which is why it 
+Mark Twain|15|2026-05-02 09:00:00|1|1|NULL|NULL|The rehearsal is where the improvisation is 
+Mark Twain|16|2026-05-21 17:45:00|2|2|2026-05-02 09:00:00|19|Brevity takes the longest to draft.
+Mark Twain|17|2026-06-08 12:15:00|3|3|2026-05-21 17:45:00|18|Everyone edits; few admit to the second pass
+Mark Twain|18|2026-06-29 08:40:00|4|4|2026-06-08 12:15:00|21|Plans survive contact with breakfast, rarely
+Mark Twain|19|2026-07-17 19:25:00|5|5|2026-06-29 08:40:00|18|The joke that explains itself has already le
+Mark Twain|20|2026-08-09 10:50:00|6|6|2026-07-17 19:25:00|23|Travel cures certainty faster than argument.
+=== 2.  ROWS vs RANGE on a tied timestamp (Ada Lovelace) ===
+Author|QuoteId|CreatedAt|RunningWithRows|RunningWithRange|RunningNoFrame|Quote
+------|-------|---------|---------------|----------------|--------------|-----
+Ada Lovelace|22|2026-07-04 10:00:00|1|2|2|A machine follows the argument, never the in
+Ada Lovelace|23|2026-07-04 10:00:00|2|2|2|Notation is the first optimisation.
+--- LAST_VALUE with the default frame vs an explicit one ---
+Author|QuoteId|CreatedAt|FirstQuoteAt|LastQuoteWrong|LastQuoteRight
+------|-------|---------|------------|--------------|--------------
+Marie Curie|24|2026-05-26 08:20:00|2026-05-26 08:20:00|2026-05-26 08:20:00|2026-07-13 14:10:00
+Marie Curie|25|2026-07-13 14:10:00|2026-05-26 08:20:00|2026-07-13 14:10:00|2026-07-13 14:10:00
+=== 3a.  The three on a tied timestamp ===
+Author|QuoteId|CreatedAt|RowNumber|RankPos|DenseRankPos
+------|-------|---------|---------|-------|------------
+Ada Lovelace|22|2026-07-04 10:00:00|1|1|1
+Ada Lovelace|23|2026-07-04 10:00:00|2|1|1
+=== 3b.  The three on a tied aggregate (Hoare and Brooks both have 7) ===
+Author|QuoteCount|RowNumber|RankPos|DenseRankPos
+------|----------|---------|-------|------------
+Edsger W. Dijkstra|12|1|1|1
+Donald Knuth|9|2|2|2
+C. A. R. Hoare|7|3|3|3
+Frederick P. Brooks Jr.|7|4|3|3
+Mark Twain|6|5|5|4
+Alan Turing|5|6|6|5
+Barbara Liskov|5|7|6|5
+Leslie Lamport|5|8|6|5
+Aristotle|4|9|9|6
+Grace Hopper|4|10|9|6
+=== 4.  The ten longest silences between consecutive quotes ===
+Author|QuoteId|GapDays|GapDaysExact|DaysToNext|CameAfter|ThisQuote
+------|-------|-------|------------|----------|---------|---------
+Confucius|6|49|48.84|38|Correct the small fault today or inher|Study without reflection is copying.
+Marie Curie|25|48|48.24|NULL|Measure twice, because the instrument |Curiosity outlasts funding, which is w
+Jane Austen|14|42|41.82|NULL|Manners are the interface; motives are|A good sentence earns its second claus
+Aristotle|4|41|41.32|NULL|The mean is not the average; it is the|Naming a thing well is half of underst
+Confucius|7|38|38.44|NULL|Study without reflection is copying.|Ask the question you are afraid answer
+Grace Hopper|34|38|38.24|NULL|Precedent is not a requirement, howeve|A nanosecond is a length before it is 
+Marcus Aurelius|10|37|37.57|27|Begin before you feel ready; readiness|You do not control the tide, only the 
+Jane Austen|13|34|34.10|42|Character shows in what a person finds|Manners are the interface; motives are
+Edsger W. Dijkstra|46|32|31.78|NULL|The bug you cannot reproduce is the de|Elegance is what remains once the spec
+Grace Hopper|32|28|28.15|22|A language people can read is a langua|Permission is the slowest dependency i
+--- offsets and defaults: one back, two back, and a substituted default ---
+Author|QuoteId|CreatedAt|OneBack|TwoBack|GapOrNull|GapWithZero
+------|-------|---------|-------|-------|---------|-----------
+Grace Hopper|31|2026-05-17 11:15:00|NULL|NULL|NULL|0
+Grace Hopper|32|2026-06-14 14:45:00|2026-05-17 11:15:00|NULL|28|28
+Grace Hopper|33|2026-07-06 09:30:00|2026-06-14 14:45:00|2026-05-17 11:15:00|22|22
+Grace Hopper|34|2026-08-13 15:20:00|2026-07-06 09:30:00|2026-06-14 14:45:00|38|38
+=== 5.  Running totals, a moving frame, and a partition-wide total ===
+Author|QuoteId|CreatedAt|Chars|RunningChars|AuthorTotal|ShareSoFar|Rolling3Avg
+------|-------|---------|-----|------------|-----------|----------|-----------
+Edsger W. Dijkstra|35|2026-05-01 08:00:00|48|48|691|6.9|48.0
+Edsger W. Dijkstra|36|2026-05-06 09:20:00|54|102|691|14.8|51.0
+Edsger W. Dijkstra|37|2026-05-13 10:40:00|66|168|691|24.3|56.0
+Edsger W. Dijkstra|38|2026-05-20 12:00:00|47|215|691|31.1|55.7
+Edsger W. Dijkstra|39|2026-05-27 13:15:00|51|266|691|38.5|54.7
+Edsger W. Dijkstra|40|2026-06-03 08:45:00|67|333|691|48.2|55.0
+Edsger W. Dijkstra|41|2026-06-10 15:30:00|67|400|691|57.9|61.7
+Edsger W. Dijkstra|42|2026-06-17 11:05:00|57|457|691|66.1|63.7
+Edsger W. Dijkstra|43|2026-06-24 16:50:00|55|512|691|74.1|59.7
+Edsger W. Dijkstra|44|2026-07-01 07:35:00|54|566|691|81.9|55.3
+Edsger W. Dijkstra|45|2026-07-15 14:25:00|62|628|691|90.9|57.0
+Edsger W. Dijkstra|46|2026-08-16 09:10:00|63|691|691|100.0|59.7
+--- a corpus-wide running total: no PARTITION BY, so one window over everything ---
+CreatedAt|Author|CorpusRunning|AuthorRunning
+---------|------|-------------|-------------
+2026-05-01 08:00:00|Edsger W. Dijkstra|1|1
+2026-05-02 09:00:00|Mark Twain|2|1
+2026-05-03 10:20:00|Frederick P. Brooks Jr.|3|1
+2026-05-04 08:10:00|Aristotle|4|1
+2026-05-05 08:30:00|Donald Knuth|5|1
+2026-05-06 09:20:00|Edsger W. Dijkstra|6|2
+2026-05-07 11:30:00|Confucius|7|1
+2026-05-08 08:25:00|C. A. R. Hoare|8|1
+2026-05-09 10:35:00|Alan Turing|9|1
+2026-05-11 09:15:00|Barbara Liskov|10|1
+2026-05-12 06:00:00|Marcus Aurelius|11|1
+2026-05-13 10:40:00|Edsger W. Dijkstra|12|3
+=== 6a.  GROUP BY collapses ===
+Author|QuoteCount|TotalChars
+------|----------|----------
+Ada Lovelace|2|87
+Marie Curie|2|105
+=== 6b.  The window keeps every row ===
+Author|QuoteId|QuoteCount|TotalChars|Quote
+------|-------|----------|----------|-----
+Ada Lovelace|22|2|87|A machine follows the argument, never the in
+Ada Lovelace|23|2|87|Notation is the first optimisation.
+Marie Curie|24|2|105|Measure twice, because the instrument lies o
+Marie Curie|25|2|105|Curiosity outlasts funding, which is why it 

@@ -96,8 +96,9 @@ LocalDB instance is left alone.
 |---|---|
 | `schema/01_schema.sql` | Tables, constraints, indexes. Drops and recreates the database |
 | `schema/02_seed.sql` | Deterministic seed data, with the edge cases the exercises hunt for |
-| `day7-joins-and-ctes/` | Day 7 — the join and CTE exercises, and the submitted answer |
-| `day7-joins-and-ctes/results/` | Captured output from the last run. Committed, because it is the exercise's evidence |
+| `day7-joins-and-ctes/` | Day 7, piece 1 — the join and CTE exercises, and the submitted answer |
+| `day7-window-functions/` | Day 7, piece 2 — ranking, `LAG`/`LEAD`, running totals, and window frames |
+| `*/results/` | Captured output from the last run. Committed, because it is the exercises' evidence |
 | `docker-compose.yml` | The SQL Server container |
 | `run-lab.ps1` | Start, apply, run, capture |
 
