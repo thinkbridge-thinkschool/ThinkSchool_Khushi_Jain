@@ -1,0 +1,73 @@
+﻿Changed database context to 'QuotesLab'.
+=== Q1-A.  Authors with quotes who have no tags at all ===
+AuthorId|FullName
+--------|--------
+--- proof the empty result is a fact about the data, not a bug ---
+AuthorsWithQuotes|AuthorsWithTaggedQuotes
+-----------------|-----------------------
+16|16
+=== Q1-B.  Authors who own at least one untagged quote ===
+FullName|UntaggedQuoteCount|UntaggedQuoteIds
+--------|------------------|----------------
+Alan Turing|1|30
+Donald Knuth|2|53, 55
+Mark Twain|1|18
+=== Q2.  Authors present in both the classic and the modern canon ===
+AuthorId|FullName
+--------|--------
+8|Alan Turing
+14|C. A. R. Hoare
+11|Donald Knuth
+10|Edsger W. Dijkstra
+13|Leslie Lamport
+--- the three-way split: classic only, modern only, both ---
+ClassicOnly|ModernOnly|Both
+-----------|----------|----
+5|6|5
+--- the rival reading: classic and modern as author eras ---
+ClassicAuthors|ModernAuthors|UnknownEra|InBothEras
+--------------|-------------|----------|----------
+8|8|3|0
+=== Q3.  Combined distinct tag list: Algorithms + Software Engineering ===
+TagId|TagName
+-----|-------
+7|design
+2|engineering
+4|failure
+6|leadership
+3|simplicity
+8|testing
+--- what UNION ALL would have returned instead ---
+ViaUnion|ViaUnionAll
+--------|-----------
+6|25
+=== 4a.  Set operators compare NULLs as equal. Joins do not. ===
+FullName|BirthYear
+--------|---------
+--- the same thing as an anti-join, which does not match NULL to NULL ---
+FullName|BirthYear
+--------|---------
+Hypatia|NULL
+Seneca|NULL
+Sun Tzu|NULL
+=== 4b.  INTERSECT binds tighter than UNION and EXCEPT ===
+v
+-
+1
+2
+3
+--- forcing left-to-right with parentheses gives a different answer ---
+v
+-
+3
+=== 4c.  Column names come from the first query; ORDER BY sorts the whole set ===
+TagName
+-------
+design
+engineering
+motivation
+testing
+=== 5.  Three spellings of the same question, and their agreement ===
+ExceptRows|NotExistsRows|AntiJoinRows|DisagreementRows
+----------|-------------|------------|----------------
+4|4|4|0

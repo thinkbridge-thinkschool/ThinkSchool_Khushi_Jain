@@ -43,6 +43,7 @@ $container   = 'quoteslab-sql'
 # mentor as a link.
 $joinsResults  = Join-Path $root 'day7-joins-and-ctes\results'
 $windowResults = Join-Path $root 'day7-window-functions\results'
+$setResults    = Join-Path $root 'day7-set-operations\results'
 
 function Invoke-Native {
     # docker writes progress and diagnostics to stderr as a matter of course.
@@ -78,6 +79,16 @@ function Invoke-InContainer {
 }
 
 if ($Stop) {
+    # Tearing down needs no credential, but Compose still refuses to parse a
+    # file whose ${MSSQL_SA_PASSWORD:?...} guard is unsatisfied. A placeholder
+    # is enough to get the file parsed; `down` never connects to SQL Server, so
+    # the value is genuinely unused. Without this, stopping the lab from a fresh
+    # shell fails with an interpolation error that has nothing to do with the
+    # actual problem.
+    if ([string]::IsNullOrWhiteSpace($env:MSSQL_SA_PASSWORD)) {
+        $env:MSSQL_SA_PASSWORD = 'unused-for-teardown'
+    }
+
     Invoke-Compose -Arguments @('down', '-v')
     Write-Host 'Container stopped and removed.'
     return
@@ -124,7 +135,7 @@ while ($true) {
 }
 Write-Host 'SQL Server is healthy.'
 
-foreach ($dir in @($joinsResults, $windowResults)) {
+foreach ($dir in @($joinsResults, $windowResults, $setResults)) {
     if (-not (Test-Path $dir)) {
         New-Item -ItemType Directory -Path $dir | Out-Null
     }
@@ -189,9 +200,11 @@ Invoke-SqlScript -ContainerPath '/sql/day7-joins-and-ctes/05_recursive_cte.sql' 
 Invoke-SqlScript -ContainerPath '/sql/day7-joins-and-ctes/06_plans.sql'                -ResultDirectory $joinsResults -ResultFileName '06_plans.txt'
 
 Invoke-SqlScript -ContainerPath '/sql/day7-window-functions/07_window_functions.sql'   -ResultDirectory $windowResults -ResultFileName '07_window_functions.txt'
+Invoke-SqlScript -ContainerPath '/sql/day7-set-operations/08_set_operations.sql'       -ResultDirectory $setResults    -ResultFileName '08_set_operations.txt'
 
 Write-Host ''
 Write-Host "Done. Result sets written to:"
 Write-Host "  $joinsResults"
 Write-Host "  $windowResults"
+Write-Host "  $setResults"
 Write-Host 'Remove the container with: ./run-lab.ps1 -Stop'

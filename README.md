@@ -124,7 +124,8 @@ Paths in this section are relative to `sql/`.
 |---|---|
 | Joins and CTEs at depth | `day7-joins-and-ctes/` — `03_joins.sql`, `04_author_quote_summary.sql`, `05_recursive_cte.sql`, `06_plans.sql`, `README.md` |
 | Window functions | `day7-window-functions/` — `07_window_functions.sql`, `README.md` |
-| Captured result sets | `day7-joins-and-ctes/results/`, `day7-window-functions/results/` |
+| Set operations from a spec | `day7-set-operations/` — `08_set_operations.sql`, `README.md` |
+| Captured result sets | `results/` under each of the three folders above |
 | The database they run against | `schema/01_schema.sql`, `schema/02_seed.sql`, `docker-compose.yml`, `run-lab.ps1` |
 
 `QuotesLab` is a separate SQL Server database, not the API's store. The shipped
