@@ -151,8 +151,4 @@ this repository. Use a different key from your local one.
 - **The deployed database is not durable.** SQLite writes to the container's own filesystem with no volume
   mounted, so every restart, revision, or scale event starts from an empty schema. Fixing it means Azure
   Files with a single replica, or moving to Azure SQL.
-- **The original JWT signing key is still in Git history.** It has been removed from the working tree and
-  rotated, but the old value remains reachable and is treated as compromised.
-- **Two migration sets are maintained by hand.** `QuotesApi/Migrations/` targets SQLite and
-  `QuotesApi.Tests/SqlServer/Migrations/` targets SQL Server for the Testcontainers suite. Nothing enforces
-  that a new migration lands in both.
+
