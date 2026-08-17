@@ -47,6 +47,7 @@ reads its secrets from Key Vault.
 | `RefactorOrders/` | The god-method refactor exercise. `Original/OrderController.cs` is kept for comparison |
 | `hello-cs/`, `hello-ts/` | Day 1 two-language warm-up |
 | `infra/` | Bicep for Container Apps, ACR, Key Vault, App Insights |
+| `sql/` | QuotesLab — a SQL Server workbench for the SQL exercises. Not the API's database |
 
 Write-ups live beside the code they describe: `RefactorOrders/REFACTOR_NOTES.md`,
 `RefactorOrders/INITIAL_PROMPT.md`, `RefactorOrders/AI_REFLECTION.md`, `QuotesApi/WHY.md`.
@@ -114,6 +115,21 @@ One row per task. Paths without a project prefix are relative to `QuotesApi/`.
 | Verify in App Insights with KQL | `docs/day5_KQL/` |
 | Polly resilience | `Resilience/EntraHttpClientExtensions.cs`, `QuotesApi.Tests/EntraResilienceHandlerTests.cs` |
 | Smoke test and Week 1 reflection | submission only |
+
+### Day 7 — SQL
+
+Paths in this section are relative to `sql/`.
+
+| Task | Where |
+|---|---|
+| Joins and CTEs at depth | `day7-joins-and-ctes/` — `03_joins.sql`, `04_author_quote_summary.sql`, `05_recursive_cte.sql`, `06_plans.sql`, `README.md` |
+| Captured result sets | `day7-joins-and-ctes/results/` |
+| The database they run against | `schema/01_schema.sql`, `schema/02_seed.sql`, `docker-compose.yml`, `run-lab.ps1` |
+
+`QuotesLab` is a separate SQL Server database, not the API's store. The shipped
+EF Core model keeps the author as a string column, carries no timestamp on
+`Quote`, and has nothing hierarchical in it, so the Day-7 question is not
+expressible against it. `sql/README.md` covers the reasoning and how to run it.
 
 ## Tests
 

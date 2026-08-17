@@ -1,0 +1,5 @@
+﻿Changed database context to 'QuotesLab'.
+Authors|Categories|QuotesTotal|QuotesLive|Tags|QuoteTags|Users|Collections|CollectionItems
+-------|----------|-----------|----------|----|---------|-----|-----------|---------------
+19|17|83|79|8|80|3|4|13
+QuotesLab seeded.

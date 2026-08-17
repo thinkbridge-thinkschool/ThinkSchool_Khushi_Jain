@@ -1,0 +1,41 @@
+# SQL Server 2022 for the QuotesLab exercises.
+#
+# The sa password is never written down here. Compose fails fast with the
+# message below if MSSQL_SA_PASSWORD is not already in the environment, which is
+# the point: the credential lives in the shell session, not in the repository.
+#
+# Port 11433 rather than 1433 so a SQL Server or LocalDB instance already
+# installed on the host is left alone.
+
+services:
+  sql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: quoteslab-sql
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?set MSSQL_SA_PASSWORD in your shell before running - see sql/README.md}
+    ports:
+      - "11433:1433"
+    volumes:
+      # The scripts are mounted read-only so sqlcmd can -i them from inside the
+      # container. Nothing has to be copied in, and an edit on the host is
+      # visible to the next run without restarting anything.
+      - ./:/sql:ro
+      #
+      # Deliberately no volume on /var/opt/mssql. SQL Server only reads
+      # MSSQL_SA_PASSWORD when it initialises a fresh data directory; on every
+      # later start it keeps the password baked into the existing master
+      # database and ignores the environment. Persisting the data directory
+      # while the password is generated per shell session therefore guarantees
+      # a login failure on the second run. Since 01_schema.sql drops and
+      # recreates the database anyway, durability here is worth nothing and
+      # costs exactly that bug.
+    healthcheck:
+      # $$ escapes to a literal $ so the shell inside the container expands the
+      # variable, rather than Compose substituting it at parse time.
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$${MSSQL_SA_PASSWORD}\" -C -b -Q 'SELECT 1' > /dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 15s

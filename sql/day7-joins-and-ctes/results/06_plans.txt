@@ -1,0 +1,176 @@
+﻿Changed database context to 'QuotesLab'.
+StmtText
+--------
+
+/* ---------------------------------------------------------------------------
+   Plan A — the submitted window version.
+
+   What to look for: an Index Scan of IX_Quote_Author_CreatedAt marked ORDERED
+   FORWARD feeding Segment and Sequence Project, with no Sort between them. The
+   index key is (AuthorId, CreatedAt DESC, QuoteId DESC), which is exactly the
+   window's PARTITION BY plus ORDER BY, so the rows arrive already in the order
+   ROW_NUMBER needs and the ranking is free.
+
+   That is the whole reason QuoteId DESC sits in the index key rather than in
+   the INCLUDE list. A tiebreaker outside the key order would still be correct,
+   and would reintroduce the sort this plan avoids.
+
+   The one Sort at the top is the final ORDER BY QuoteCount DESC, which cannot
+   be indexed away because the count does not exist until the window is
+   computed.
+   --------------------------------------------------------------------------- */
+WITH AuthorQuote AS
+(
+    SELECT
+        q.AuthorId,
+        q.QuoteId,
+        q.QuoteText,
+        q.CreatedAt,
+        AuthorQuoteCount = COUNT(*) OVER (PARTITION BY q.AuthorId),
+        Recency          = ROW_NUMBER() OVER (
+                               PARTITION BY q.AuthorId
+                               ORDER BY     q.CreatedAt DESC, q.QuoteId DESC)
+    FROM app.Quote AS q
+    WHERE q.IsDeleted = 0
+)
+SELECT
+    a.AuthorId,
+    a.FullName,
+    QuoteCount        = COALESCE(aq.AuthorQuoteCount, 0),
+    MostRecentQuote   = aq.QuoteText,
+    MostRecentQuoteAt = aq.CreatedAt
+FROM app.Author AS a
+LEFT JOIN AuthorQuote AS aq
+       ON aq.AuthorId = a.AuthorId
+      AND aq.Recency  = 1
+ORDER BY QuoteCount DESC, a.FullName;
+StmtText
+--------
+  |--Sort(ORDER BY:([Expr1009] DESC, [a].[FullName] ASC))
+       |--Compute Scalar(DEFINE:([Expr1009]=CASE WHEN [Expr1007] IS NOT NULL THEN [Expr1007] ELSE (0) END))
+            |--Merge Join(Left Outer Join, MERGE:([a].[AuthorId])=([q].[AuthorId]), RESIDUAL:([QuotesLab].[app].[Author].[AuthorId] as [a].[AuthorId]=[QuotesLab].[app].[Quote].[AuthorId] as [q].[AuthorId]))
+                 |--Clustered Index Scan(OBJECT:([QuotesLab].[app].[Author].[PK_Author] AS [a]), ORDERED FORWARD)
+                 |--Compute Scalar(DEFINE:([Expr1007]=[Expr1002]))
+                      |--Filter(WHERE:([Expr1003]=(1)))
+                           |--Compute Scalar(DEFINE:([Expr1005]=[QuotesLab].[app].[Quote].[QuoteText] as [q].[QuoteText], [Expr1006]=[QuotesLab].[app].[Quote].[CreatedAt] as [q].[CreatedAt]))
+                                |--Sequence Project(DEFINE:([Expr1003]=row_number))
+                                     |--Segment
+                                          |--Nested Loops(Inner Join)
+                                               |--Table Spool
+                                               |    |--Segment
+                                               |         |--Index Scan(OBJECT:([QuotesLab].[app].[Quote].[IX_Quote_Author_CreatedAt] AS [q]), ORDERED FORWARD)
+                                               |--Nested Loops(Inner Join, WHERE:((1)))
+                                                    |--Compute Scalar(DEFINE:([Expr1002]=CONVERT_IMPLICIT(int,[Expr1011],0)))
+                                                    |    |--Stream Aggregate(DEFINE:([Expr1011]=Count(*)))
+                                                    |         |--Table Spool
+                                                    |--Table Spool
+StmtText
+--------
+
+/* ---------------------------------------------------------------------------
+   Plan B — the OUTER APPLY version.
+
+   Two halves that behave very differently, which is the point of running this.
+
+   The APPLY half is as good as advertised: Index Seek on
+   IX_Quote_Author_CreatedAt seeking AuthorId, ORDERED FORWARD, under a Top(1).
+   One seek per author, one row read, no sort. It does not care how many quotes
+   an author has.
+
+   The aggregate half is the problem. QuoteStats is referenced once, so the
+   optimiser inlines it rather than spooling it, and it becomes a Clustered
+   Index Scan of PK_Quote with a residual predicate on AuthorId, driven by
+   nested loops -- one scan of the whole table per author. IX_Quote_CategoryId
+   and the filtered index are both ignored because neither leads with what this
+   half needs.
+
+   So "APPLY is cheaper at scale" is only half true, and the half that is true
+   is not the half that dominates. Making APPLY genuinely win would mean
+   sourcing the count from somewhere that is not a per-author scan: an indexed
+   view, a maintained counter column, or a single pre-aggregated pass whose
+   result is materialised before the join.
+   --------------------------------------------------------------------------- */
+WITH QuoteStats AS
+(
+    SELECT
+        q.AuthorId,
+        QuoteCount = COUNT(*)
+    FROM app.Quote AS q
+    WHERE q.IsDeleted = 0
+    GROUP BY q.AuthorId
+)
+SELECT
+    a.AuthorId,
+    a.FullName,
+    QuoteCount        = COALESCE(s.QuoteCount, 0),
+    MostRecentQuote   = latest.QuoteText,
+    MostRecentQuoteAt = latest.CreatedAt
+FROM app.Author AS a
+LEFT JOIN QuoteStats AS s ON s.AuthorId = a.AuthorId
+OUTER APPLY (
+    SELECT TOP (1)
+        q.QuoteText,
+        q.CreatedAt
+    FROM app.Quote AS q
+    WHERE q.AuthorId  = a.AuthorId
+      AND q.IsDeleted = 0
+    ORDER BY q.CreatedAt DESC, q.QuoteId DESC
+) AS latest
+ORDER BY QuoteCount DESC, a.FullName;
+StmtText
+--------
+  |--Sort(ORDER BY:([Expr1008] DESC, [a].[FullName] ASC))
+       |--Compute Scalar(DEFINE:([Expr1008]=CASE WHEN [Expr1004] IS NOT NULL THEN [Expr1004] ELSE (0) END))
+            |--Nested Loops(Left Outer Join, OUTER REFERENCES:([a].[AuthorId]))
+                 |--Nested Loops(Left Outer Join, OUTER REFERENCES:([a].[AuthorId]))
+                 |    |--Index Scan(OBJECT:([QuotesLab].[app].[Author].[UQ_Author_FullName] AS [a]))
+                 |    |--Compute Scalar(DEFINE:([Expr1004]=[Expr1002]))
+                 |         |--Compute Scalar(DEFINE:([Expr1002]=CONVERT_IMPLICIT(int,[Expr1011],0)))
+                 |              |--Stream Aggregate(DEFINE:([Expr1011]=Count(*)))
+                 |                   |--Clustered Index Scan(OBJECT:([QuotesLab].[app].[Quote].[PK_Quote] AS [q]), WHERE:([QuotesLab].[app].[Quote].[AuthorId] as [q].[AuthorId]=[QuotesLab].[app].[Author].[AuthorId] as [a].[AuthorId] AND [QuotesLab].[app].[Quote].[IsDeleted] as [q].[IsDeleted]=(0)))
+                 |--Top(TOP EXPRESSION:((1)))
+                      |--Compute Scalar(DEFINE:([Expr1006]=[QuotesLab].[app].[Quote].[QuoteText] as [q].[QuoteText], [Expr1007]=[QuotesLab].[app].[Quote].[CreatedAt] as [q].[CreatedAt]))
+                           |--Index Seek(OBJECT:([QuotesLab].[app].[Quote].[IX_Quote_Author_CreatedAt] AS [q]), SEEK:([q].[AuthorId]=[QuotesLab].[app].[Author].[AuthorId] as [a].[AuthorId]) ORDERED FORWARD)
+StmtText
+--------
+
+/* ---------------------------------------------------------------------------
+   Plan C — the correlated-subquery version.
+
+   Three separate correlated executions per author, which is what the exercise
+   asked to be replaced. Worth reading beside plan A to see the difference
+   stated in operators rather than in prose.
+   --------------------------------------------------------------------------- */
+SELECT
+    a.AuthorId,
+    a.FullName,
+    QuoteCount        = (SELECT COUNT(*)
+                         FROM app.Quote AS q
+                         WHERE q.AuthorId = a.AuthorId AND q.IsDeleted = 0),
+    MostRecentQuote   = (SELECT TOP (1) q.QuoteText
+                         FROM app.Quote AS q
+                         WHERE q.AuthorId = a.AuthorId AND q.IsDeleted = 0
+                         ORDER BY q.CreatedAt DESC, q.QuoteId DESC),
+    MostRecentQuoteAt = (SELECT TOP (1) q.CreatedAt
+                         FROM app.Quote AS q
+                         WHERE q.AuthorId = a.AuthorId AND q.IsDeleted = 0
+                         ORDER BY q.CreatedAt DESC, q.QuoteId DESC)
+FROM app.Author AS a
+ORDER BY QuoteCount DESC, a.FullName;
+StmtText
+--------
+  |--Sort(ORDER BY:([Expr1004] DESC, [a].[FullName] ASC))
+       |--Compute Scalar(DEFINE:([Expr1004]=CASE WHEN CASE WHEN [Expr1002] IS NULL THEN (0) ELSE [Expr1002] END IS NULL THEN (0) ELSE CASE WHEN [Expr1002] IS NULL THEN (0) ELSE [Expr1002] END END, [Expr1010]=[Expr1009]))
+            |--Nested Loops(Left Outer Join, OUTER REFERENCES:([a].[AuthorId]))
+                 |--Compute Scalar(DEFINE:([Expr1007]=[QuotesLab].[app].[Quote].[QuoteText] as [q].[QuoteText]))
+                 |    |--Nested Loops(Left Outer Join, OUTER REFERENCES:([a].[AuthorId]))
+                 |         |--Nested Loops(Left Outer Join, OUTER REFERENCES:([a].[AuthorId]))
+                 |         |    |--Clustered Index Scan(OBJECT:([QuotesLab].[app].[Author].[PK_Author] AS [a]))
+                 |         |    |--Compute Scalar(DEFINE:([Expr1002]=CONVERT_IMPLICIT(int,[Expr1013],0)))
+                 |         |         |--Stream Aggregate(DEFINE:([Expr1013]=Count(*)))
+                 |         |              |--Clustered Index Scan(OBJECT:([QuotesLab].[app].[Quote].[PK_Quote] AS [q]), WHERE:([QuotesLab].[app].[Quote].[AuthorId] as [q].[AuthorId]=[QuotesLab].[app].[Author].[AuthorId] as [a].[AuthorId] AND [QuotesLab].[app].[Quote].[IsDeleted] as [q].[IsDeleted]=(0)))
+                 |         |--Top(TOP EXPRESSION:((1)))
+                 |              |--Index Seek(OBJECT:([QuotesLab].[app].[Quote].[IX_Quote_Author_CreatedAt] AS [q]), SEEK:([q].[AuthorId]=[QuotesLab].[app].[Author].[AuthorId] as [a].[AuthorId]) ORDERED FORWARD)
+                 |--Top(TOP EXPRESSION:((1)))
+                      |--Compute Scalar(DEFINE:([Expr1009]=[QuotesLab].[app].[Quote].[CreatedAt] as [q].[CreatedAt]))
+                           |--Index Seek(OBJECT:([QuotesLab].[app].[Quote].[IX_Quote_Author_CreatedAt] AS [q]), SEEK:([q].[AuthorId]=[QuotesLab].[app].[Author].[AuthorId] as [a].[AuthorId]) ORDERED FORWARD)
