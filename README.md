@@ -133,6 +133,21 @@ EF Core model keeps the author as a string column, carries no timestamp on
 `Quote`, and has nothing hierarchical in it, so the Day-7 question is not
 expressible against it. `sql/README.md` covers the reasoning and how to run it.
 
+### Day 8 — indexes and execution plans
+
+Paths in this section are relative to `sql/`.
+
+| Task | Where |
+|---|---|
+| Clustered vs non-clustered indexes | `day8-indexes/` — `09_build_dataset.sql`, `10_index_lab.sql`, `11_actual_plans.sql`, `12_write_cost.sql`, `README.md` |
+| Captured result sets | `day8-indexes/results/` |
+
+Day 8 needs 100,000 rows and the Day-7 seed has eighty, so it generates its own
+table in a `perf` schema rather than growing `app.Quote` — which would have
+invalidated the three Day-7 pieces already submitted against that data. The rows
+are derived arithmetically from row numbers, so the page counts and logical-read
+figures are reproducible.
+
 ## Tests
 
 ```bash

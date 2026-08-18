@@ -1,0 +1,421 @@
+﻿Changed database context to 'QuotesLab'.
+=== 0.  Resetting perf.QuoteView to a heap ===
+ 
+############################################################
+### STAGE 0 — HEAP. No indexes.                          ###
+############################################################
+IndexName|IndexType|IsUnique|KeyColumns|IncludedCols|UsedPages|UsedMB
+---------|---------|--------|----------|------------|---------|------
+(heap)|HEAP|0|-|-|1908|14.91
+Table 'Worktable'. Scan count 0, logical reads 0, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'sysiscols'. Scan count 2, logical reads 4, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'sysschobjs'. Scan count 0, logical reads 6, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'sysidxstats'. Scan count 1, logical reads 8, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'syspalvalues'. Scan count 0, logical reads 2, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'sysrowsets'. Scan count 1, logical reads 5, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+--- stage 0 / Q1: one day of views (range on ViewedAt) ---
+ReportDay|ViewCount|AvgDwell|MaxDwell
+---------|---------|--------|--------
+2026-02-01|1108|153.25|301
+Table 'QuoteView'. Scan count 1, logical reads 1907, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'ReadLog'. Scan count 0, logical reads 3, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+--- stage 0 / Q2: ten most recent views of quote 42 ---
+QuoteId|ViewedAt|DwellSeconds
+-------|--------|------------
+42|2026-04-01 05:28:30.880|279
+42|2026-04-01 01:38:24.346|193
+42|2026-03-31 23:57:00.009|255
+42|2026-03-31 20:49:48.118|78
+42|2026-03-31 17:59:30.437|148
+42|2026-03-31 12:50:06.323|292
+42|2026-03-31 11:26:54.856|5
+42|2026-03-31 11:12:36.936|195
+42|2026-03-31 10:57:00.015|189
+42|2026-03-31 09:00:00.772|277
+Table 'QuoteView'. Scan count 1, logical reads 1907, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'ReadLog'. Scan count 0, logical reads 2, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+--- stage 0 / Q3: dwell rollup for three quotes ---
+QuoteId|ViewCount|AvgDwell
+-------|---------|--------
+7|1263|155.75
+42|1268|148.03
+63|1269|150.25
+Table 'Worktable'. Scan count 0, logical reads 0, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'Workfile'. Scan count 0, logical reads 0, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'QuoteView'. Scan count 1, logical reads 1907, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'ReadLog'. Scan count 0, logical reads 2, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+--- stage 0 / Q4: detail rows for rare country MT ---
+ViewId|ViewedAt|QuoteId|CountryCode|DwellSeconds
+------|--------|-------|-----------|------------
+5358|2026-01-05 20:04:06.663|7|MT|296
+6093|2026-01-06 11:59:36.421|24|MT|283
+7952|2026-01-08 04:16:18.821|24|MT|62
+10799|2026-01-10 17:57:24.883|59|MT|152
+11228|2026-01-11 03:15:06.433|63|MT|18
+12479|2026-01-12 06:21:24.307|35|MT|167
+16407|2026-01-15 19:27:48.627|78|MT|98
+18618|2026-01-17 19:22:06.960|19|MT|66
+19920|2026-01-18 23:34:42.136|80|MT|114
+19973|2026-01-19 00:43:36.140|26|MT|148
+29080|2026-01-27 06:02:42.207|65|MT|56
+35868|2026-02-02 09:07:06.632|44|MT|125
+43611|2026-02-09 08:53:00.972|53|MT|273
+46326|2026-02-11 19:42:30.871|19|MT|179
+52821|2026-02-17 16:26:00.369|38|MT|122
+53952|2026-02-18 16:56:18.987|49|MT|293
+57254|2026-02-21 16:28:54.358|67|MT|227
+58520|2026-02-22 19:54:42.221|53|MT|77
+61777|2026-02-25 18:28:48.494|29|MT|188
+65084|2026-02-28 18:07:54.715|6|MT|272
+65815|2026-03-01 09:58:12.579|78|MT|148
+70102|2026-03-05 06:51:18.356|66|MT|138
+76429|2026-03-10 23:56:24.318|45|MT|37
+80454|2026-03-14 15:08:54.547|61|MT|20
+86256|2026-03-19 20:51:30.151|41|MT|37
+94775|2026-03-27 13:26:12.517|51|MT|97
+Table 'Worktable'. Scan count 0, logical reads 0, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'QuoteView'. Scan count 1, logical reads 1907, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'ReadLog'. Scan count 0, logical reads 2, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+--- stage 0 / Q5: dwell rollup for common country IN ---
+CountryCode|ViewCount|AvgDwell
+-----------|---------|--------
+IN|55417|151.31
+Table 'QuoteView'. Scan count 1, logical reads 1907, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'ReadLog'. Scan count 0, logical reads 2, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+ 
+############################################################
+### STAGE 1 — + UNIQUE CLUSTERED (ViewedAt, ViewId)      ###
+############################################################
+Table 'QuoteView'. Scan count 16, logical reads 30512, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'Worktable'. Scan count 0, logical reads 0, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+IndexName|IndexType|IsUnique|KeyColumns|IncludedCols|UsedPages|UsedMB
+---------|---------|--------|----------|------------|---------|------
+CIX_QuoteView_ViewedAt|CLUSTERED|1|ViewedAt, ViewId|-|1948|15.22
+Table 'Worktable'. Scan count 0, logical reads 0, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'sysiscols'. Scan count 2, logical reads 4, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'sysschobjs'. Scan count 0, logical reads 6, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'sysidxstats'. Scan count 1, logical reads 8, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'sysobjvalues'. Scan count 2, logical reads 4, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'Worktable'. Scan count 0, logical reads 0, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'syscolpars'. Scan count 0, logical reads 4, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'syspalvalues'. Scan count 0, logical reads 2, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'sysrowsets'. Scan count 1, logical reads 5, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+--- stage 1 / Q1: one day of views (should now be a range seek) ---
+ReportDay|ViewCount|AvgDwell|MaxDwell
+---------|---------|--------|--------
+2026-02-01|1108|153.25|301
+Table 'QuoteView'. Scan count 1, logical reads 26, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'ReadLog'. Scan count 0, logical reads 2, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+--- stage 1 / Q2 ---
+QuoteId|ViewedAt|DwellSeconds
+-------|--------|------------
+42|2026-04-01 05:28:30.880|279
+42|2026-04-01 01:38:24.346|193
+42|2026-03-31 23:57:00.009|255
+42|2026-03-31 20:49:48.118|78
+42|2026-03-31 17:59:30.437|148
+42|2026-03-31 12:50:06.323|292
+42|2026-03-31 11:26:54.856|5
+42|2026-03-31 11:12:36.936|195
+42|2026-03-31 10:57:00.015|189
+42|2026-03-31 09:00:00.772|277
+Table 'QuoteView'. Scan count 1, logical reads 37, physical reads 0, page server reads 0, read-ahead reads 91, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'ReadLog'. Scan count 0, logical reads 2, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+--- stage 1 / Q3 ---
+QuoteId|ViewCount|AvgDwell
+-------|---------|--------
+7|1263|155.75
+42|1268|148.03
+63|1269|150.25
+Table 'Worktable'. Scan count 0, logical reads 0, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'Workfile'. Scan count 0, logical reads 0, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'QuoteView'. Scan count 1, logical reads 1932, physical reads 0, page server reads 0, read-ahead reads 14, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'ReadLog'. Scan count 0, logical reads 2, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+--- stage 1 / Q4 ---
+ViewId|ViewedAt|QuoteId|CountryCode|DwellSeconds
+------|--------|-------|-----------|------------
+5358|2026-01-05 20:04:06.663|7|MT|296
+6093|2026-01-06 11:59:36.421|24|MT|283
+7952|2026-01-08 04:16:18.821|24|MT|62
+10799|2026-01-10 17:57:24.883|59|MT|152
+11228|2026-01-11 03:15:06.433|63|MT|18
+12479|2026-01-12 06:21:24.307|35|MT|167
+16407|2026-01-15 19:27:48.627|78|MT|98
+18618|2026-01-17 19:22:06.960|19|MT|66
+19920|2026-01-18 23:34:42.136|80|MT|114
+19973|2026-01-19 00:43:36.140|26|MT|148
+29080|2026-01-27 06:02:42.207|65|MT|56
+35868|2026-02-02 09:07:06.632|44|MT|125
+43611|2026-02-09 08:53:00.972|53|MT|273
+46326|2026-02-11 19:42:30.871|19|MT|179
+52821|2026-02-17 16:26:00.369|38|MT|122
+53952|2026-02-18 16:56:18.987|49|MT|293
+57254|2026-02-21 16:28:54.358|67|MT|227
+58520|2026-02-22 19:54:42.221|53|MT|77
+61777|2026-02-25 18:28:48.494|29|MT|188
+65084|2026-02-28 18:07:54.715|6|MT|272
+65815|2026-03-01 09:58:12.579|78|MT|148
+70102|2026-03-05 06:51:18.356|66|MT|138
+76429|2026-03-10 23:56:24.318|45|MT|37
+80454|2026-03-14 15:08:54.547|61|MT|20
+86256|2026-03-19 20:51:30.151|41|MT|37
+94775|2026-03-27 13:26:12.517|51|MT|97
+Table 'QuoteView'. Scan count 1, logical reads 1932, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'ReadLog'. Scan count 0, logical reads 2, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+--- stage 1 / Q5 ---
+CountryCode|ViewCount|AvgDwell
+-----------|---------|--------
+IN|55417|151.31
+Table 'QuoteView'. Scan count 1, logical reads 1932, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'ReadLog'. Scan count 0, logical reads 2, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+ 
+############################################################
+### STAGE 2 — + NC (QuoteId, ViewedAt DESC, ViewId DESC) ###
+###            INCLUDE (DwellSeconds)                    ###
+############################################################
+Table 'QuoteView'. Scan count 16, logical reads 30896, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'Worktable'. Scan count 0, logical reads 0, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+IndexName|IndexType|IsUnique|KeyColumns|IncludedCols|UsedPages|UsedMB
+---------|---------|--------|----------|------------|---------|------
+CIX_QuoteView_ViewedAt|CLUSTERED|1|ViewedAt, ViewId|-|1948|15.22
+IX_QuoteView_QuoteId_ViewedAt|NONCLUSTERED|0|QuoteId, ViewedAt DESC, ViewId DESC|DwellSeconds|390|3.05
+Table 'sysobjvalues'. Scan count 6, logical reads 12, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'Worktable'. Scan count 0, logical reads 0, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'syscolpars'. Scan count 0, logical reads 12, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'sysiscols'. Scan count 4, logical reads 8, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'sysschobjs'. Scan count 0, logical reads 10, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'sysidxstats'. Scan count 1, logical reads 14, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'syspalvalues'. Scan count 0, logical reads 4, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'sysrowsets'. Scan count 2, logical reads 10, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+--- stage 2 / Q1 ---
+ReportDay|ViewCount|AvgDwell|MaxDwell
+---------|---------|--------|--------
+2026-02-01|1108|153.25|301
+Table 'QuoteView'. Scan count 1, logical reads 26, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'ReadLog'. Scan count 0, logical reads 2, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+--- stage 2 / Q2: should now be a covering seek with no Sort ---
+QuoteId|ViewedAt|DwellSeconds
+-------|--------|------------
+42|2026-04-01 05:28:30.880|279
+42|2026-04-01 01:38:24.346|193
+42|2026-03-31 23:57:00.009|255
+42|2026-03-31 20:49:48.118|78
+42|2026-03-31 17:59:30.437|148
+42|2026-03-31 12:50:06.323|292
+42|2026-03-31 11:26:54.856|5
+42|2026-03-31 11:12:36.936|195
+42|2026-03-31 10:57:00.015|189
+42|2026-03-31 09:00:00.772|277
+Table 'QuoteView'. Scan count 1, logical reads 3, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'ReadLog'. Scan count 0, logical reads 2, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+--- stage 2 / Q3: should now be covered -- no key lookups ---
+QuoteId|ViewCount|AvgDwell
+-------|---------|--------
+7|1263|155.75
+42|1268|148.03
+63|1269|150.25
+Table 'QuoteView'. Scan count 3, logical reads 26, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'ReadLog'. Scan count 0, logical reads 2, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+--- stage 2 / Q4 ---
+ViewId|ViewedAt|QuoteId|CountryCode|DwellSeconds
+------|--------|-------|-----------|------------
+5358|2026-01-05 20:04:06.663|7|MT|296
+6093|2026-01-06 11:59:36.421|24|MT|283
+7952|2026-01-08 04:16:18.821|24|MT|62
+10799|2026-01-10 17:57:24.883|59|MT|152
+11228|2026-01-11 03:15:06.433|63|MT|18
+12479|2026-01-12 06:21:24.307|35|MT|167
+16407|2026-01-15 19:27:48.627|78|MT|98
+18618|2026-01-17 19:22:06.960|19|MT|66
+19920|2026-01-18 23:34:42.136|80|MT|114
+19973|2026-01-19 00:43:36.140|26|MT|148
+29080|2026-01-27 06:02:42.207|65|MT|56
+35868|2026-02-02 09:07:06.632|44|MT|125
+43611|2026-02-09 08:53:00.972|53|MT|273
+46326|2026-02-11 19:42:30.871|19|MT|179
+52821|2026-02-17 16:26:00.369|38|MT|122
+53952|2026-02-18 16:56:18.987|49|MT|293
+57254|2026-02-21 16:28:54.358|67|MT|227
+58520|2026-02-22 19:54:42.221|53|MT|77
+61777|2026-02-25 18:28:48.494|29|MT|188
+65084|2026-02-28 18:07:54.715|6|MT|272
+65815|2026-03-01 09:58:12.579|78|MT|148
+70102|2026-03-05 06:51:18.356|66|MT|138
+76429|2026-03-10 23:56:24.318|45|MT|37
+80454|2026-03-14 15:08:54.547|61|MT|20
+86256|2026-03-19 20:51:30.151|41|MT|37
+94775|2026-03-27 13:26:12.517|51|MT|97
+Table 'QuoteView'. Scan count 1, logical reads 1932, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'ReadLog'. Scan count 0, logical reads 2, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+--- stage 2 / Q5 ---
+CountryCode|ViewCount|AvgDwell
+-----------|---------|--------
+IN|55417|151.31
+Table 'QuoteView'. Scan count 1, logical reads 1932, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'ReadLog'. Scan count 0, logical reads 2, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+ 
+############################################################
+### STAGE 3 — + NC (CountryCode), narrow, non-covering   ###
+############################################################
+Table 'QuoteView'. Scan count 6, logical reads 11586, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'Worktable'. Scan count 0, logical reads 0, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+IndexName|IndexType|IsUnique|KeyColumns|IncludedCols|UsedPages|UsedMB
+---------|---------|--------|----------|------------|---------|------
+CIX_QuoteView_ViewedAt|CLUSTERED|1|ViewedAt, ViewId|-|1948|15.22
+IX_QuoteView_QuoteId_ViewedAt|NONCLUSTERED|0|QuoteId, ViewedAt DESC, ViewId DESC|DwellSeconds|390|3.05
+IX_QuoteView_CountryCode|NONCLUSTERED|0|CountryCode|-|295|2.30
+Table 'sysobjvalues'. Scan count 7, logical reads 14, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'Worktable'. Scan count 0, logical reads 0, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'syscolpars'. Scan count 0, logical reads 14, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'sysiscols'. Scan count 6, logical reads 12, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'sysschobjs'. Scan count 0, logical reads 14, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'sysidxstats'. Scan count 1, logical reads 20, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'syspalvalues'. Scan count 0, logical reads 6, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'sysrowsets'. Scan count 3, logical reads 15, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+--- stage 3 / Q1 ---
+ReportDay|ViewCount|AvgDwell|MaxDwell
+---------|---------|--------|--------
+2026-02-01|1108|153.25|301
+Table 'QuoteView'. Scan count 1, logical reads 26, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'ReadLog'. Scan count 0, logical reads 2, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+--- stage 3 / Q2 ---
+QuoteId|ViewedAt|DwellSeconds
+-------|--------|------------
+42|2026-04-01 05:28:30.880|279
+42|2026-04-01 01:38:24.346|193
+42|2026-03-31 23:57:00.009|255
+42|2026-03-31 20:49:48.118|78
+42|2026-03-31 17:59:30.437|148
+42|2026-03-31 12:50:06.323|292
+42|2026-03-31 11:26:54.856|5
+42|2026-03-31 11:12:36.936|195
+42|2026-03-31 10:57:00.015|189
+42|2026-03-31 09:00:00.772|277
+Table 'QuoteView'. Scan count 1, logical reads 3, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'ReadLog'. Scan count 0, logical reads 2, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+--- stage 3 / Q3 ---
+QuoteId|ViewCount|AvgDwell
+-------|---------|--------
+7|1263|155.75
+42|1268|148.03
+63|1269|150.25
+Table 'QuoteView'. Scan count 3, logical reads 26, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'ReadLog'. Scan count 0, logical reads 2, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+--- stage 3 / Q4: rare country -- seek plus a few dozen key lookups ---
+ViewId|ViewedAt|QuoteId|CountryCode|DwellSeconds
+------|--------|-------|-----------|------------
+5358|2026-01-05 20:04:06.663|7|MT|296
+6093|2026-01-06 11:59:36.421|24|MT|283
+7952|2026-01-08 04:16:18.821|24|MT|62
+10799|2026-01-10 17:57:24.883|59|MT|152
+11228|2026-01-11 03:15:06.433|63|MT|18
+12479|2026-01-12 06:21:24.307|35|MT|167
+16407|2026-01-15 19:27:48.627|78|MT|98
+18618|2026-01-17 19:22:06.960|19|MT|66
+19920|2026-01-18 23:34:42.136|80|MT|114
+19973|2026-01-19 00:43:36.140|26|MT|148
+29080|2026-01-27 06:02:42.207|65|MT|56
+35868|2026-02-02 09:07:06.632|44|MT|125
+43611|2026-02-09 08:53:00.972|53|MT|273
+46326|2026-02-11 19:42:30.871|19|MT|179
+52821|2026-02-17 16:26:00.369|38|MT|122
+53952|2026-02-18 16:56:18.987|49|MT|293
+57254|2026-02-21 16:28:54.358|67|MT|227
+58520|2026-02-22 19:54:42.221|53|MT|77
+61777|2026-02-25 18:28:48.494|29|MT|188
+65084|2026-02-28 18:07:54.715|6|MT|272
+65815|2026-03-01 09:58:12.579|78|MT|148
+70102|2026-03-05 06:51:18.356|66|MT|138
+76429|2026-03-10 23:56:24.318|45|MT|37
+80454|2026-03-14 15:08:54.547|61|MT|20
+86256|2026-03-19 20:51:30.151|41|MT|37
+94775|2026-03-27 13:26:12.517|51|MT|97
+Table 'QuoteView'. Scan count 1, logical reads 90, physical reads 0, page server reads 0, read-ahead reads 1, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'ReadLog'. Scan count 0, logical reads 2, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+--- stage 3 / Q5: common country -- expect NO improvement ---
+CountryCode|ViewCount|AvgDwell
+-----------|---------|--------
+IN|55417|151.31
+Table 'QuoteView'. Scan count 1, logical reads 1932, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'ReadLog'. Scan count 0, logical reads 2, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+ 
+=== 6a.  Logical reads by query and stage ===
+QueryName|Heap|PlusClustered|PlusNC1|PlusNC2
+---------|----|-------------|-------|-------
+Q1 one day|1949|52|50|50
+Q2 recent for one|1947|57|27|25
+Q3 rollup 3 quotes|1947|1956|56|56
+Q4 rare country|1947|1952|1956|140
+Q5 common country|1947|1952|1956|1962
+Table 'Worktable'. Scan count 0, logical reads 0, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'ReadLog'. Scan count 1, logical reads 2, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+=== 6b.  The same thing as a ratio against the heap baseline ===
+QueryName|HeapReads|FinalReads|TimesCheaper
+---------|---------|----------|------------
+Q2 recent for one|1947|25|77.88
+Q1 one day|1949|50|38.98
+Q3 rollup 3 quotes|1947|56|34.77
+Q4 rare country|1947|140|13.91
+Q5 common country|1947|1962|.99
+Table 'Worktable'. Scan count 0, logical reads 0, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'Workfile'. Scan count 0, logical reads 0, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'ReadLog'. Scan count 2, logical reads 4, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+=== 6c.  What the three indexes cost in space ===
+IndexName|IndexType|IsUnique|KeyColumns|IncludedCols|UsedPages|UsedMB
+---------|---------|--------|----------|------------|---------|------
+CIX_QuoteView_ViewedAt|CLUSTERED|1|ViewedAt, ViewId|-|1948|15.22
+IX_QuoteView_QuoteId_ViewedAt|NONCLUSTERED|0|QuoteId, ViewedAt DESC, ViewId DESC|DwellSeconds|390|3.05
+IX_QuoteView_CountryCode|NONCLUSTERED|0|CountryCode|-|295|2.30
+Table 'sysobjvalues'. Scan count 7, logical reads 14, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'Worktable'. Scan count 0, logical reads 0, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'syscolpars'. Scan count 0, logical reads 14, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'sysiscols'. Scan count 6, logical reads 12, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'sysschobjs'. Scan count 0, logical reads 14, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'sysidxstats'. Scan count 1, logical reads 20, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'syspalvalues'. Scan count 0, logical reads 6, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'sysrowsets'. Scan count 3, logical reads 15, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+ 
+=== 7a.  Forcing the seek the optimiser refused, and pricing it ===
+CountryCode|ViewCount|AvgDwell
+-----------|---------|--------
+IN|55417|151.31
+Table 'QuoteView'. Scan count 1, logical reads 169885, physical reads 0, page server reads 0, read-ahead reads 4, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'ReadLog'. Scan count 0, logical reads 2, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+ 
+=== 7b.  The covering version of the same index ===
+Table 'QuoteView'. Scan count 6, logical reads 11586, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'Worktable'. Scan count 0, logical reads 0, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+CountryCode|ViewCount|AvgDwell
+-----------|---------|--------
+IN|55417|151.31
+Table 'QuoteView'. Scan count 1, logical reads 191, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'ReadLog'. Scan count 0, logical reads 2, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+ 
+=== 7c.  COUNT(*) served by the narrowest index on the table ===
+TotalViews
+----------
+100000
+Table 'QuoteView'. Scan count 1, logical reads 289, physical reads 0, page server reads 0, read-ahead reads 7, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'ReadLog'. Scan count 0, logical reads 2, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+=== 7d.  The extras, side by side with the heap and the final state ===
+QueryName|LogicalReads|VsHeapBaseline
+---------|------------|--------------
+Q5 forced seek|176877|90.75
+Q5 with covering NC|227|.12
+COUNT(*) all rows|323|.17
+Table 'ReadLog'. Scan count 5, logical reads 10, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+=== 7e.  Final index state -- back to one clustered plus two non-clustered ===
+IndexName|IndexType|IsUnique|KeyColumns|IncludedCols|UsedPages|UsedMB
+---------|---------|--------|----------|------------|---------|------
+CIX_QuoteView_ViewedAt|CLUSTERED|1|ViewedAt, ViewId|-|1948|15.22
+IX_QuoteView_QuoteId_ViewedAt|NONCLUSTERED|0|QuoteId, ViewedAt DESC, ViewId DESC|DwellSeconds|390|3.05
+IX_QuoteView_CountryCode|NONCLUSTERED|0|CountryCode|-|295|2.30
+Table 'sysobjvalues'. Scan count 7, logical reads 14, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'Worktable'. Scan count 0, logical reads 0, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'syscolpars'. Scan count 0, logical reads 14, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'sysiscols'. Scan count 6, logical reads 12, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'sysschobjs'. Scan count 0, logical reads 14, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'sysidxstats'. Scan count 1, logical reads 20, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'syspalvalues'. Scan count 0, logical reads 6, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'sysrowsets'. Scan count 3, logical reads 15, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Index lab complete. Run 11_actual_plans.sql for the plans behind these numbers.

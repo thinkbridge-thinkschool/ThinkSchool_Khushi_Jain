@@ -34,9 +34,9 @@ through Testcontainers, and the image is therefore already pulled on any machine
 that has run the tests. Introducing PostgreSQL would mean a third engine, a
 second dialect, and no benefit the exercises can use.
 
-Everything in `schema/` and `day7-joins-and-ctes/` is Azure SQL compatible apart
-from the `CREATE DATABASE` batch, so the same scripts run unchanged against an
-Azure SQL database when one is provisioned.
+Everything in `schema/`, `day7-*/` and `day8-indexes/` is Azure SQL compatible
+apart from the `CREATE DATABASE` batch, so the same scripts run unchanged against
+an Azure SQL database when one is provisioned.
 
 ## Running it
 
@@ -60,10 +60,12 @@ powershell -ExecutionPolicy Bypass -File sql/run-lab.ps1
 ```
 
 The script starts the container, waits for its healthcheck rather than sleeping
-a guessed interval, applies the schema and seed, runs the three Day-7 scripts,
-and writes every result set to `day7-joins-and-ctes/results/`. `-SchemaOnly`
-rebuilds the database without running the queries. `-Stop` removes the container
-and its data with it.
+a guessed interval, applies the schema and seed, runs the exercise scripts in
+order, and writes every result set to the `results/` folder beside the script
+that produced it. `-SchemaOnly` rebuilds the database without running the
+queries. `-Stop` removes the container and its data with it.
+
+Day 8 generates its own 100,000-row table and adds a minute or two to the run.
 
 Nothing persists between runs, on purpose. SQL Server reads
 `MSSQL_SA_PASSWORD` only when it initialises a fresh data directory and ignores
@@ -76,12 +78,32 @@ The password reaches sqlcmd through `SQLCMDPASSWORD`, read from the container's
 own environment. It is never a command-line argument, so it appears in no
 process list and in none of the captured output.
 
+## Two schemas
+
+`app` holds the domain: authors, quotes, categories, tags, collections. Sixteen
+authors and eighty quotes, which is the right size for reading a join by eye and
+the wrong size for measuring anything.
+
+`perf` holds tables that exist only to be measured — Day 8's 100,000-row view
+log and the write-cost clones beside it. Nothing in `app` references anything in
+`perf`, so the Day-8 tables can be dropped or regenerated without touching the
+data the Day-7 answers were captured against. That separation is the point:
+adding 100,000 rows to `app.Quote` would silently invalidate three already
+submitted pieces.
+
 ## Reproducibility
 
 `01_schema.sql` drops and recreates the database, so identity values start from
 1 every time. `02_seed.sql` uses fixed `datetime2` literals and never calls
-`GETDATE()`. Two runs a month apart produce byte-identical result files, which
-is what makes the committed output in `results/` evidence rather than a snapshot.
+`GETDATE()`. Day 8's 100,000 rows are derived arithmetically from row numbers
+through `HASHBYTES`, with no `RAND()` and no `NEWID()`, so the row set is
+identical on every machine and page counts are comparable between runs.
+
+Two runs a month apart produce byte-identical result files, which is what makes
+the committed output in `results/` evidence rather than a snapshot. The one
+figure deliberately left out of every captured file is elapsed time, which is
+not reproducible and not needed: logical reads count the same work without
+depending on cache state or on what else the machine is doing.
 
 ## Connecting by hand
 
@@ -106,6 +128,7 @@ LocalDB instance is left alone.
 | `day7-joins-and-ctes/` | Day 7, piece 1 — the join and CTE exercises, and the submitted answer |
 | `day7-window-functions/` | Day 7, piece 2 — ranking, `LAG`/`LEAD`, running totals, and window frames |
 | `day7-set-operations/` | Day 7, piece 3 — `UNION`/`INTERSECT`/`EXCEPT`, and translating a vague spec |
+| `day8-indexes/` | Day 8, piece 1 — clustered vs non-clustered, measured over 100,000 rows |
 | `*/results/` | Captured output from the last run. Committed, because it is the exercises' evidence |
 | `docker-compose.yml` | The SQL Server container |
 | `run-lab.ps1` | Start, apply, run, capture |

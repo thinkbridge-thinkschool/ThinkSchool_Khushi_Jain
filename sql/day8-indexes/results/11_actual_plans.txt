@@ -1,0 +1,148 @@
+﻿Changed database context to 'QuotesLab'.
+=== 0.  Indexes these plans were captured against ===
+IndexName|IndexType|IsUnique|KeyColumns|IncludedCols|UsedPages|UsedMB
+---------|---------|--------|----------|------------|---------|------
+CIX_QuoteView_ViewedAt|CLUSTERED|1|ViewedAt, ViewId|-|1948|15.22
+IX_QuoteView_QuoteId_ViewedAt|NONCLUSTERED|0|QuoteId, ViewedAt DESC, ViewId DESC|DwellSeconds|390|3.05
+IX_QuoteView_CountryCode|NONCLUSTERED|0|CountryCode|-|295|2.30
+=== Q1 -- look for: Clustered Index Seek on CIX_QuoteView_ViewedAt, ===
+===        one Executes, Rows about 1,100, no Sort, no lookup.      ===
+ReportDay|ViewCount|AvgDwell|MaxDwell
+---------|---------|--------|--------
+2026-02-01|1108|153.25|301
+Rows|Executes|StmtText|StmtId|NodeId|Parent|PhysicalOp|LogicalOp|Argument|DefinedValues|EstimateRows|EstimateIO|EstimateCPU|AvgRowSize|TotalSubtreeCost|OutputList|Warnings|Type|Parallel|EstimateExecutions
+----|--------|--------|------|------|------|----------|---------|--------|-------------|------------|----------|-----------|----------|----------------|----------|--------|----|--------|------------------
+1|1|SELECT
+        ReportDay = CONVERT(date, '2026-02-01'),
+        ViewCount = COUNT(*),
+        AvgDwell  = CONVERT(decimal(8,2), AVG(v.DwellSeconds * 1.0)),
+        MaxDwell  = MAX(v.DwellSeconds)
+    FROM perf.QuoteView AS v
+    WHERE v.ViewedAt >= '2026-02-01T00:00:00'
+      AND v.ViewedAt <  '2026-02-02T00:00:00'
+    OPTION (MAXDOP 1, RECOMPILE)|1|1|0|NULL|NULL|NULL|NULL|1.0|NULL|NULL|NULL|2.0833742E-2|NULL|NULL|SELECT|0|NULL
+0|0|  |--Compute Scalar(DEFINE:([Expr1004]='2026-02-01', [Expr1005]=CONVERT(decimal(8,2),[Expr1002],0)))|1|2|1|Compute Scalar|Compute Scalar|DEFINE:([Expr1004]='2026-02-01', [Expr1005]=CONVERT(decimal(8,2),[Expr1002],0))|[Expr1004]='2026-02-01', [Expr1005]=CONVERT(decimal(8,2),[Expr1002],0)|1.0|0.0|0.0000001|23|2.0833742E-2|[Expr1001], [Expr1003], [Expr1004], [Expr1005]|NULL|PLAN_ROW|0|1.0
+0|0|       |--Compute Scalar(DEFINE:([Expr1001]=CONVERT_IMPLICIT(int,[Expr1014],0), [Expr1002]=CASE WHEN [Expr1015]=(0) THEN NULL ELSE [Expr1016]/CONVERT_IMPLICIT(numeric(19,0),[Expr1015],0) END))|1|3|2|Compute Scalar|Compute Scalar|DEFINE:([Expr1001]=CONVERT_IMPLICIT(int,[Expr1014],0), [Expr1002]=CASE WHEN [Expr1015]=(0) THEN NULL ELSE [Expr1016]/CONVERT_IMPLICIT(numeric(19,0),[Expr1015],0) END)|[Expr1001]=CONVERT_IMPLICIT(int,[Expr1014],0), [Expr1002]=CASE WHEN [Expr1015]=(0) THEN NULL ELSE [Expr1016]/CONVERT_IMPLICIT(numeric(19,0),[Expr1015],0) END|1.0|0.0|0.0|32|2.0833641E-2|[Expr1001], [Expr1002], [Expr1003]|NULL|PLAN_ROW|0|1.0
+1|1|            |--Stream Aggregate(DEFINE:([Expr1014]=Count(*), [Expr1015]=COUNT_BIG([Expr1006]), [Expr1016]=SUM([Expr1006]), [Expr1003]=MAX([QuotesLab].[perf].[QuoteView].[DwellSeconds] as [v].[DwellSeconds])))|1|4|3|Stream Aggregate|Aggregate|NULL|[Expr1014]=Count(*), [Expr1015]=COUNT_BIG([Expr1006]), [Expr1016]=SUM([Expr1006]), [Expr1003]=MAX([QuotesLab].[perf].[QuoteView].[DwellSeconds] as [v].[DwellSeconds])|1.0|0.0|6.6569552E-4|32|2.0833641E-2|[Expr1003], [Expr1014], [Expr1015], [Expr1016]|NULL|PLAN_ROW|0|1.0
+0|0|                 |--Compute Scalar(DEFINE:([Expr1006]=CONVERT_IMPLICIT(numeric(10,0),[QuotesLab].[perf].[QuoteView].[DwellSeconds] as [v].[DwellSeconds],0)*(1.0)))|1|5|4|Compute Scalar|Compute Scalar|DEFINE:([Expr1006]=CONVERT_IMPLICIT(numeric(10,0),[QuotesLab].[perf].[QuoteView].[DwellSeconds] as [v].[DwellSeconds],0)*(1.0))|[Expr1006]=CONVERT_IMPLICIT(numeric(10,0),[QuotesLab].[perf].[QuoteView].[DwellSeconds] as [v].[DwellSeconds],0)*(1.0)|1108.6592|0.0|1.1086592E-4|20|2.0167947E-2|[v].[DwellSeconds], [Expr1006]|NULL|PLAN_ROW|0|1.0
+1108|1|                      |--Clustered Index Seek(OBJECT:([QuotesLab].[perf].[QuoteView].[CIX_QuoteView_ViewedAt] AS [v]), SEEK:([v].[ViewedAt] >= '2026-02-01 00:00:00.000' AND [v].[ViewedAt] < '2026-02-02 00:00:00.000') ORDERED FORWARD)|1|6|5|Clustered Index Seek|Clustered Index Seek|OBJECT:([QuotesLab].[perf].[QuoteView].[CIX_QuoteView_ViewedAt] AS [v]), SEEK:([v].[ViewedAt] >= '2026-02-01 00:00:00.000' AND [v].[ViewedAt] < '2026-02-02 00:00:00.000') ORDERED FORWARD|[v].[DwellSeconds]|1108.6592|1.8680556E-2|1.376525E-3|11|0.02005708|[v].[DwellSeconds]|NULL|PLAN_ROW|0|1.0
+=== Q2 -- look for: Top over an Index Seek on                       ===
+===        IX_QuoteView_QuoteId_ViewedAt, ORDERED FORWARD, no Sort. ===
+QuoteId|ViewedAt|DwellSeconds
+-------|--------|------------
+42|2026-04-01 05:28:30.880|279
+42|2026-04-01 01:38:24.346|193
+42|2026-03-31 23:57:00.009|255
+42|2026-03-31 20:49:48.118|78
+42|2026-03-31 17:59:30.437|148
+42|2026-03-31 12:50:06.323|292
+42|2026-03-31 11:26:54.856|5
+42|2026-03-31 11:12:36.936|195
+42|2026-03-31 10:57:00.015|189
+42|2026-03-31 09:00:00.772|277
+Rows|Executes|StmtText|StmtId|NodeId|Parent|PhysicalOp|LogicalOp|Argument|DefinedValues|EstimateRows|EstimateIO|EstimateCPU|AvgRowSize|TotalSubtreeCost|OutputList|Warnings|Type|Parallel|EstimateExecutions
+----|--------|--------|------|------|------|----------|---------|--------|-------------|------------|----------|-----------|----------|----------------|----------|--------|----|--------|------------------
+10|1|SELECT TOP (10)
+        v.QuoteId,
+        v.ViewedAt,
+        v.DwellSeconds
+    FROM perf.QuoteView AS v
+    WHERE v.QuoteId = 42
+    ORDER BY v.ViewedAt DESC, v.ViewId DESC
+    OPTION (MAXDOP 1, RECOMPILE)|1|1|0|NULL|NULL|NULL|NULL|10.0|NULL|NULL|NULL|3.3132243E-3|NULL|NULL|SELECT|0|NULL
+10|1|  |--Top(TOP EXPRESSION:((10)))|1|2|1|Top|Top|TOP EXPRESSION:((10))|NULL|10.0|0.0|0.000001|22|3.3132243E-3|[v].[QuoteId], [v].[ViewedAt], [v].[DwellSeconds]|NULL|PLAN_ROW|0|1.0
+10|1|       |--Index Seek(OBJECT:([QuotesLab].[perf].[QuoteView].[IX_QuoteView_QuoteId_ViewedAt] AS [v]), SEEK:([v].[QuoteId]=(42)) ORDERED FORWARD)|1|3|2|Index Seek|Index Seek|OBJECT:([QuotesLab].[perf].[QuoteView].[IX_QuoteView_QuoteId_ViewedAt] AS [v]), SEEK:([v].[QuoteId]=(42)) ORDERED FORWARD|[v].[ViewId], [v].[QuoteId], [v].[ViewedAt], [v].[DwellSeconds]|10.0|5.8313408E-3|1.5517999E-3|30|3.3122243E-3|[v].[ViewId], [v].[QuoteId], [v].[ViewedAt], [v].[DwellSeconds]|NULL|PLAN_ROW|0|1.0
+=== Q3 -- look for: Index Seek on IX_QuoteView_QuoteId_ViewedAt     ===
+===        with three Executes and NO Key Lookup anywhere.          ===
+QuoteId|ViewCount|AvgDwell
+-------|---------|--------
+7|1263|155.75
+42|1268|148.03
+63|1269|150.25
+Rows|Executes|StmtText|StmtId|NodeId|Parent|PhysicalOp|LogicalOp|Argument|DefinedValues|EstimateRows|EstimateIO|EstimateCPU|AvgRowSize|TotalSubtreeCost|OutputList|Warnings|Type|Parallel|EstimateExecutions
+----|--------|--------|------|------|------|----------|---------|--------|-------------|------------|----------|-----------|----------|----------------|----------|--------|----|--------|------------------
+3|1|SELECT
+        v.QuoteId,
+        ViewCount = COUNT(*),
+        AvgDwell  = CONVERT(decimal(8,2), AVG(v.DwellSeconds * 1.0))
+    FROM perf.QuoteView AS v
+    WHERE v.QuoteId IN (7, 42, 63)
+    GROUP BY v.QuoteId
+    ORDER BY v.QuoteId
+    OPTION (MAXDOP 1, RECOMPILE)|1|1|0|NULL|NULL|NULL|NULL|3.0|NULL|NULL|NULL|0.01975343|NULL|NULL|SELECT|0|NULL
+0|0|  |--Compute Scalar(DEFINE:([Expr1003]=CONVERT(decimal(8,2),[Expr1002],0)))|1|2|1|Compute Scalar|Compute Scalar|DEFINE:([Expr1003]=CONVERT(decimal(8,2),[Expr1002],0))|[Expr1003]=CONVERT(decimal(8,2),[Expr1002],0)|3.0|0.0|3.0000001E-7|20|0.01975343|[v].[QuoteId], [Expr1001], [Expr1003]|NULL|PLAN_ROW|0|1.0
+0|0|       |--Compute Scalar(DEFINE:([Expr1001]=CONVERT_IMPLICIT(int,[Expr1011],0), [Expr1002]=CASE WHEN [Expr1012]=(0) THEN NULL ELSE [Expr1013]/CONVERT_IMPLICIT(numeric(19,0),[Expr1012],0) END))|1|3|2|Compute Scalar|Compute Scalar|DEFINE:([Expr1001]=CONVERT_IMPLICIT(int,[Expr1011],0), [Expr1002]=CASE WHEN [Expr1012]=(0) THEN NULL ELSE [Expr1013]/CONVERT_IMPLICIT(numeric(19,0),[Expr1012],0) END)|[Expr1001]=CONVERT_IMPLICIT(int,[Expr1011],0), [Expr1002]=CASE WHEN [Expr1012]=(0) THEN NULL ELSE [Expr1013]/CONVERT_IMPLICIT(numeric(19,0),[Expr1012],0) END|3.0|0.0|0.0|32|0.01975313|[v].[QuoteId], [Expr1001], [Expr1002]|NULL|PLAN_ROW|0|1.0
+3|1|            |--Stream Aggregate(GROUP BY:([v].[QuoteId]) DEFINE:([Expr1011]=Count(*), [Expr1012]=COUNT_BIG([Expr1004]), [Expr1013]=SUM([Expr1004])))|1|4|3|Stream Aggregate|Aggregate|GROUP BY:([v].[QuoteId])|[Expr1011]=Count(*), [Expr1012]=COUNT_BIG([Expr1004]), [Expr1013]=SUM([Expr1004])|3.0|0.0|0.0022815|32|0.01975313|[v].[QuoteId], [Expr1011], [Expr1012], [Expr1013]|NULL|PLAN_ROW|0|1.0
+0|0|                 |--Compute Scalar(DEFINE:([Expr1004]=CONVERT_IMPLICIT(numeric(10,0),[QuotesLab].[perf].[QuoteView].[DwellSeconds] as [v].[DwellSeconds],0)*(1.0)))|1|5|4|Compute Scalar|Compute Scalar|DEFINE:([Expr1004]=CONVERT_IMPLICIT(numeric(10,0),[QuotesLab].[perf].[QuoteView].[DwellSeconds] as [v].[DwellSeconds],0)*(1.0))|[Expr1004]=CONVERT_IMPLICIT(numeric(10,0),[QuotesLab].[perf].[QuoteView].[DwellSeconds] as [v].[DwellSeconds],0)*(1.0)|3800.0|0.0|3.8000001E-4|20|0.01747163|[v].[QuoteId], [Expr1004]|NULL|PLAN_ROW|0|1.0
+3800|1|                      |--Index Seek(OBJECT:([QuotesLab].[perf].[QuoteView].[IX_QuoteView_QuoteId_ViewedAt] AS [v]), SEEK:([v].[QuoteId]=(7) OR [v].[QuoteId]=(42) OR [v].[QuoteId]=(63)) ORDERED FORWARD)|1|6|5|Index Seek|Index Seek|OBJECT:([QuotesLab].[perf].[QuoteView].[IX_QuoteView_QuoteId_ViewedAt] AS [v]), SEEK:([v].[QuoteId]=(7) OR [v].[QuoteId]=(42) OR [v].[QuoteId]=(63)) ORDERED FORWARD|[v].[QuoteId], [v].[DwellSeconds]|3800.0|1.2754629E-2|4.3370002E-3|15|0.01709163|[v].[QuoteId], [v].[DwellSeconds]|NULL|PLAN_ROW|0|1.0
+=== Q4 -- look for: Index Seek on IX_QuoteView_CountryCode feeding  ===
+===        a Nested Loops with a Key Lookup, Executes = matched rows.===
+ViewId|ViewedAt|QuoteId|CountryCode|DwellSeconds
+------|--------|-------|-----------|------------
+5358|2026-01-05 20:04:06.663|7|MT|296
+6093|2026-01-06 11:59:36.421|24|MT|283
+7952|2026-01-08 04:16:18.821|24|MT|62
+10799|2026-01-10 17:57:24.883|59|MT|152
+11228|2026-01-11 03:15:06.433|63|MT|18
+12479|2026-01-12 06:21:24.307|35|MT|167
+16407|2026-01-15 19:27:48.627|78|MT|98
+18618|2026-01-17 19:22:06.960|19|MT|66
+19920|2026-01-18 23:34:42.136|80|MT|114
+19973|2026-01-19 00:43:36.140|26|MT|148
+29080|2026-01-27 06:02:42.207|65|MT|56
+35868|2026-02-02 09:07:06.632|44|MT|125
+43611|2026-02-09 08:53:00.972|53|MT|273
+46326|2026-02-11 19:42:30.871|19|MT|179
+52821|2026-02-17 16:26:00.369|38|MT|122
+53952|2026-02-18 16:56:18.987|49|MT|293
+57254|2026-02-21 16:28:54.358|67|MT|227
+58520|2026-02-22 19:54:42.221|53|MT|77
+61777|2026-02-25 18:28:48.494|29|MT|188
+65084|2026-02-28 18:07:54.715|6|MT|272
+65815|2026-03-01 09:58:12.579|78|MT|148
+70102|2026-03-05 06:51:18.356|66|MT|138
+76429|2026-03-10 23:56:24.318|45|MT|37
+80454|2026-03-14 15:08:54.547|61|MT|20
+86256|2026-03-19 20:51:30.151|41|MT|37
+94775|2026-03-27 13:26:12.517|51|MT|97
+Rows|Executes|StmtText|StmtId|NodeId|Parent|PhysicalOp|LogicalOp|Argument|DefinedValues|EstimateRows|EstimateIO|EstimateCPU|AvgRowSize|TotalSubtreeCost|OutputList|Warnings|Type|Parallel|EstimateExecutions
+----|--------|--------|------|------|------|----------|---------|--------|-------------|------------|----------|-----------|----------|----------------|----------|--------|----|--------|------------------
+26|1|SELECT
+        v.ViewId,
+        v.ViewedAt,
+        v.QuoteId,
+        v.CountryCode,
+        v.DwellSeconds
+    FROM perf.QuoteView AS v
+    WHERE v.CountryCode = 'MT'
+    ORDER BY v.ViewedAt, v.ViewId
+    OPTION (MAXDOP 1, RECOMPILE)|1|1|0|NULL|NULL|NULL|NULL|26.0|NULL|NULL|NULL|8.5167281E-2|NULL|NULL|SELECT|0|NULL
+26|1|  |--Nested Loops(Inner Join, OUTER REFERENCES:([v].[ViewId], [v].[ViewedAt], [Expr1001]) WITH ORDERED PREFETCH)|1|2|1|Nested Loops|Inner Join|OUTER REFERENCES:([v].[ViewId], [v].[ViewedAt], [Expr1001]) WITH ORDERED PREFETCH|NULL|26.0|0.0|0.00010868|32|8.5167281E-2|[v].[ViewId], [v].[QuoteId], [v].[ViewedAt], [v].[CountryCode], [v].[DwellSeconds]|NULL|PLAN_ROW|0|1.0
+26|1|       |--Index Seek(OBJECT:([QuotesLab].[perf].[QuoteView].[IX_QuoteView_CountryCode] AS [v]), SEEK:([v].[CountryCode]='MT') ORDERED FORWARD)|1|4|2|Index Seek|Index Seek|OBJECT:([QuotesLab].[perf].[QuoteView].[IX_QuoteView_CountryCode] AS [v]), SEEK:([v].[CountryCode]='MT') ORDERED FORWARD|[v].[ViewId], [v].[ViewedAt], [v].[CountryCode]|26.0|0.003125|0.0001856|24|3.3106001E-3|[v].[ViewId], [v].[ViewedAt], [v].[CountryCode]|NULL|PLAN_ROW|0|1.0
+26|26|       |--Clustered Index Seek(OBJECT:([QuotesLab].[perf].[QuoteView].[CIX_QuoteView_ViewedAt] AS [v]), SEEK:([v].[ViewedAt]=[QuotesLab].[perf].[QuoteView].[ViewedAt] as [v].[ViewedAt] AND [v].[ViewId]=[QuotesLab].[perf].[QuoteView].[ViewId] as [v].[ViewId]) LOOKUP ORDERED FORWARD)|1|6|2|Clustered Index Seek|Clustered Index Seek|OBJECT:([QuotesLab].[perf].[QuoteView].[CIX_QuoteView_ViewedAt] AS [v]), SEEK:([v].[ViewedAt]=[QuotesLab].[perf].[QuoteView].[ViewedAt] as [v].[ViewedAt] AND [v].[ViewId]=[QuotesLab].[perf].[QuoteView].[ViewId] as [v].[ViewId]) LOOKUP ORDERED FORWARD|[v].[QuoteId], [v].[DwellSeconds]|1.0|0.003125|0.0001581|15|8.1748001E-2|[v].[QuoteId], [v].[DwellSeconds]|NULL|PLAN_ROW|0|26.0
+=== Q5 -- look for: Clustered Index Scan. The CountryCode index is  ===
+===        applicable, available, and correctly not used.           ===
+CountryCode|ViewCount|AvgDwell
+-----------|---------|--------
+IN|55417|151.31
+Rows|Executes|StmtText|StmtId|NodeId|Parent|PhysicalOp|LogicalOp|Argument|DefinedValues|EstimateRows|EstimateIO|EstimateCPU|AvgRowSize|TotalSubtreeCost|OutputList|Warnings|Type|Parallel|EstimateExecutions
+----|--------|--------|------|------|------|----------|---------|--------|-------------|------------|----------|-----------|----------|----------------|----------|--------|----|--------|------------------
+1|1|SELECT
+        CountryCode = 'IN',
+        ViewCount   = COUNT(*),
+        AvgDwell    = CONVERT(decimal(8,2), AVG(v.DwellSeconds * 1.0))
+    FROM perf.QuoteView AS v
+    WHERE v.CountryCode = 'IN'
+    OPTION (MAXDOP 1, RECOMPILE)|1|1|0|NULL|NULL|NULL|NULL|1.0|NULL|NULL|NULL|1.6223105|NULL|NULL|SELECT|0|NULL
+0|0|  |--Compute Scalar(DEFINE:([Expr1003]='IN', [Expr1004]=CONVERT(decimal(8,2),[Expr1002],0)))|1|2|1|Compute Scalar|Compute Scalar|DEFINE:([Expr1003]='IN', [Expr1004]=CONVERT(decimal(8,2),[Expr1002],0))|[Expr1003]='IN', [Expr1004]=CONVERT(decimal(8,2),[Expr1002],0)|1.0|0.0|0.0000001|21|1.6223105|[Expr1001], [Expr1003], [Expr1004]|NULL|PLAN_ROW|0|1.0
+0|0|       |--Compute Scalar(DEFINE:([Expr1001]=CONVERT_IMPLICIT(int,[Expr1012],0), [Expr1002]=CASE WHEN [Expr1013]=(0) THEN NULL ELSE [Expr1014]/CONVERT_IMPLICIT(numeric(19,0),[Expr1013],0) END))|1|3|2|Compute Scalar|Compute Scalar|DEFINE:([Expr1001]=CONVERT_IMPLICIT(int,[Expr1012],0), [Expr1002]=CASE WHEN [Expr1013]=(0) THEN NULL ELSE [Expr1014]/CONVERT_IMPLICIT(numeric(19,0),[Expr1013],0) END)|[Expr1001]=CONVERT_IMPLICIT(int,[Expr1012],0), [Expr1002]=CASE WHEN [Expr1013]=(0) THEN NULL ELSE [Expr1014]/CONVERT_IMPLICIT(numeric(19,0),[Expr1013],0) END|1.0|0.0|0.0|28|1.6223105|[Expr1001], [Expr1002]|NULL|PLAN_ROW|0|1.0
+1|1|            |--Stream Aggregate(DEFINE:([Expr1012]=Count(*), [Expr1013]=COUNT_BIG([Expr1005]), [Expr1014]=SUM([Expr1005])))|1|4|3|Stream Aggregate|Aggregate|NULL|[Expr1012]=Count(*), [Expr1013]=COUNT_BIG([Expr1005]), [Expr1014]=SUM([Expr1005])|1.0|0.0|3.3250701E-2|28|1.6223105|[Expr1012], [Expr1013], [Expr1014]|NULL|PLAN_ROW|0|1.0
+0|0|                 |--Compute Scalar(DEFINE:([Expr1005]=CONVERT_IMPLICIT(numeric(10,0),[QuotesLab].[perf].[QuoteView].[DwellSeconds] as [v].[DwellSeconds],0)*(1.0)))|1|5|4|Compute Scalar|Compute Scalar|DEFINE:([Expr1005]=CONVERT_IMPLICIT(numeric(10,0),[QuotesLab].[perf].[QuoteView].[DwellSeconds] as [v].[DwellSeconds],0)*(1.0))|[Expr1005]=CONVERT_IMPLICIT(numeric(10,0),[QuotesLab].[perf].[QuoteView].[DwellSeconds] as [v].[DwellSeconds],0)*(1.0)|55417.0|0.0|9.9999998E-3|18|1.5410597|[Expr1005]|NULL|PLAN_ROW|0|1.0
+55417|1|                      |--Clustered Index Scan(OBJECT:([QuotesLab].[perf].[QuoteView].[CIX_QuoteView_ViewedAt] AS [v]), WHERE:([QuotesLab].[perf].[QuoteView].[CountryCode] as [v].[CountryCode]='IN'))|1|6|5|Clustered Index Scan|Clustered Index Scan|OBJECT:([QuotesLab].[perf].[QuoteView].[CIX_QuoteView_ViewedAt] AS [v]), WHERE:([QuotesLab].[perf].[QuoteView].[CountryCode] as [v].[CountryCode]='IN')|[v].[DwellSeconds]|55417.0|1.4209027|0.110157|13|1.5310597|[v].[DwellSeconds]|NULL|PLAN_ROW|0|1.0
+=== 3.  Per-index access counts for the five statements above ===
+IndexName|IndexType|RangeScans|SingletonLookups
+---------|---------|----------|----------------
+CIX_QuoteView_ViewedAt|CLUSTERED|2|26
+IX_QuoteView_QuoteId_ViewedAt|NONCLUSTERED|4|0
+IX_QuoteView_CountryCode|NONCLUSTERED|1|0
+Plans captured. Run 12_write_cost.sql for the other half of the trade.

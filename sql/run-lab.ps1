@@ -1,12 +1,13 @@
 <#
 .SYNOPSIS
-    Builds QuotesLab in a local SQL Server container and runs the Day-7 scripts,
-    saving every result set under day7-joins-and-ctes/results.
+    Builds QuotesLab in a local SQL Server container and runs the Day-7 and
+    Day-8 scripts, saving every result set under the matching exercise folder.
 
 .DESCRIPTION
     One command, reproducible output. The schema script drops and recreates the
     database and the seed uses fixed timestamps and no GETDATE(), so two runs on
-    two machines produce identical files.
+    two machines produce identical files. Day 8's 100,000-row table is generated
+    arithmetically from row numbers for the same reason.
 
     The sa password is read from $env:MSSQL_SA_PASSWORD and is never passed as a
     command-line argument. sqlcmd picks it up from SQLCMDPASSWORD inside the
@@ -33,6 +34,16 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# sqlcmd runs inside a Linux container and emits UTF-8. PowerShell decodes a
+# native command's output using [Console]::OutputEncoding, which defaults to the
+# OEM codepage in some hosts -- notably when this script is launched as
+# `powershell -File` from Git Bash rather than from a PowerShell session. Every
+# non-ASCII character then round-trips into mojibake before Out-File writes it,
+# so an em dash in a PRINT banner lands in the captured evidence as three
+# characters of noise. Pinning the encoding makes the captured files identical
+# whichever shell started the run, which is the whole promise of results/.
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
 $root        = $PSScriptRoot
 $composeFile = Join-Path $root 'docker-compose.yml'
 $container   = 'quoteslab-sql'
@@ -44,6 +55,7 @@ $container   = 'quoteslab-sql'
 $joinsResults  = Join-Path $root 'day7-joins-and-ctes\results'
 $windowResults = Join-Path $root 'day7-window-functions\results'
 $setResults    = Join-Path $root 'day7-set-operations\results'
+$indexResults  = Join-Path $root 'day8-indexes\results'
 
 function Invoke-Native {
     # docker writes progress and diagnostics to stderr as a matter of course.
@@ -135,7 +147,7 @@ while ($true) {
 }
 Write-Host 'SQL Server is healthy.'
 
-foreach ($dir in @($joinsResults, $windowResults, $setResults)) {
+foreach ($dir in @($joinsResults, $windowResults, $setResults, $indexResults)) {
     if (-not (Test-Path $dir)) {
         New-Item -ItemType Directory -Path $dir | Out-Null
     }
@@ -202,9 +214,19 @@ Invoke-SqlScript -ContainerPath '/sql/day7-joins-and-ctes/06_plans.sql'         
 Invoke-SqlScript -ContainerPath '/sql/day7-window-functions/07_window_functions.sql'   -ResultDirectory $windowResults -ResultFileName '07_window_functions.txt'
 Invoke-SqlScript -ContainerPath '/sql/day7-set-operations/08_set_operations.sql'       -ResultDirectory $setResults    -ResultFileName '08_set_operations.txt'
 
+# Day 8 builds its own 100,000-row table and must run in this order: 09 creates
+# the heap, 10 measures it and then adds the three indexes, 11 needs those
+# indexes to exist, and 12 works on its own tables. Together they add a minute
+# or two to the run -- most of it 10's deliberately terrible forced-seek query.
+Invoke-SqlScript -ContainerPath '/sql/day8-indexes/09_build_dataset.sql' -ResultDirectory $indexResults -ResultFileName '09_build_dataset.txt'
+Invoke-SqlScript -ContainerPath '/sql/day8-indexes/10_index_lab.sql'     -ResultDirectory $indexResults -ResultFileName '10_index_lab.txt'
+Invoke-SqlScript -ContainerPath '/sql/day8-indexes/11_actual_plans.sql'  -ResultDirectory $indexResults -ResultFileName '11_actual_plans.txt'
+Invoke-SqlScript -ContainerPath '/sql/day8-indexes/12_write_cost.sql'    -ResultDirectory $indexResults -ResultFileName '12_write_cost.txt'
+
 Write-Host ''
 Write-Host "Done. Result sets written to:"
 Write-Host "  $joinsResults"
 Write-Host "  $windowResults"
 Write-Host "  $setResults"
+Write-Host "  $indexResults"
 Write-Host 'Remove the container with: ./run-lab.ps1 -Stop'

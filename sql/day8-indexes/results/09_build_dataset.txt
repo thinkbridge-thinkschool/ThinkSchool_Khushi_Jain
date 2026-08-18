@@ -1,0 +1,34 @@
+﻿Changed database context to 'QuotesLab'.
+=== 0.  Server and database context ===
+ProductVersion|Edition|CompatLevel|RecoveryModel
+--------------|-------|-----------|-------------
+16.0.4265.3|Developer Edition (64-bit)|160|FULL
+=== 2.  Generating 100,000 rows into the heap ===
+=== 3.  Column statistics (FULLSCAN, before any measurement) ===
+=== 4a.  Size of the heap ===
+Structure|TotalRows|UsedPages|ReservedPages|UsedMB
+---------|---------|---------|-------------|------
+heap (no index)|100000|1908|1913|14.91
+=== 4b.  Row width and page fullness ===
+IndexId|index_type_desc|page_count|AvgRecordBytes|AvgPageFullnessPct
+-------|---------------|----------|--------------|------------------
+0|HEAP|1907|150.87|99.01
+=== 4c.  The CountryCode skew the tipping-point section depends on ===
+CountryCode|Views|SharePct
+-----------|-----|--------
+IN|55417|55.417
+US|22657|22.657
+GB|10807|10.807
+DE|6542|6.542
+BR|3652|3.652
+JP|899|.899
+MT|26|.026
+=== 4d.  Shape of the rest of the data ===
+DistinctQuotes|DistinctUsers|FirstView|LastView|SpanDays
+--------------|-------------|---------|--------|--------
+80|2500|2026-01-01 00:00:00.885|2026-04-01 06:38:42.263|90
+=== 4e.  Selectivity of each measured predicate ===
+Q1_OneDay_ViewedAt|Q2_Q3_OneQuote|Q4_RareCountry_MT|Q5_CommonCountry_IN
+------------------|--------------|-----------------|-------------------
+1108|1268|26|55417
+perf.QuoteView built as a heap. Run 10_index_lab.sql next.

@@ -1,0 +1,54 @@
+﻿Changed database context to 'QuotesLab'.
+=== 0.  Recovery model, which decides how much log an insert generates ===
+RecoveryModel|LogReuseWait
+-------------|------------
+FULL|ACTIVE_TRANSACTION
+=== 1.  Generating the 20,000 rows every load will insert ===
+=== 4.  Loading 20,000 rows into each of the four structures ===
+=== 5.  Updating 2,000 rows: a column in no index, then an index key ===
+=== 6a.  Log bytes and logical reads per scenario ===
+Scenario|Structure|RowsTouched|LogicalReads|LogKB|LogBytesPerRow|VsHeap
+--------|---------|-----------|------------|-----|--------------|------
+insert 20,000 rows|heap|20000|46801|5315.6|272.2|1.00
+insert 20,000 rows|clustered only|20000|38297|5968.7|305.6|1.12
+insert 20,000 rows|clustered + 2 NC|20000|192106|11708.3|599.5|2.20
+insert 20,000 rows|clustered on a GUID|20000|95210|8989.4|460.3|1.69
+update column in no index|heap|2000|4912|203.2|104.1|1.00
+update column in no index|clustered + 2 NC|2000|2555|257.9|132.1|1.27
+update an index key column|heap|2000|4446|203.2|104.1|1.00
+update an index key column|clustered + 2 NC|2000|24873|776.6|397.6|3.82
+=== 6b.  Index rows written, and leaf pages allocated ===
+TableName|IndexName|IndexType|LeafInserts|LeafUpdates|LeafDeletes|LeafAllocations
+---------|---------|---------|-----------|-----------|-----------|---------------
+perf.WriteClustered|CIX_WriteClustered|CLUSTERED|20000|0|0|1
+perf.WriteHeap|(heap)|HEAP|20000|4000|0|422
+perf.WriteIndexed|CIX_WriteIndexed|CLUSTERED|20000|4000|0|1
+perf.WriteIndexed|IX_WriteIndexed_QuoteId_ViewedAt|NONCLUSTERED|20000|0|0|1
+perf.WriteIndexed|IX_WriteIndexed_CountryCode|NONCLUSTERED|22000|0|0|74
+perf.WriteRandomKey|CIX_WriteRandomKey|CLUSTERED|20000|0|0|1
+=== 6c.  Space: every structure, and the total per table ===
+TableName|IndexName|IndexType|TotalRows|UsedPages|UsedKB
+---------|---------|---------|---------|---------|------
+perf.WriteClustered|CIX_WriteClustered|CLUSTERED|20000|426|3408
+perf.WriteHeap|(heap)|HEAP|20000|423|3384
+perf.WriteIndexed|CIX_WriteIndexed|CLUSTERED|20000|426|3408
+perf.WriteIndexed|IX_WriteIndexed_QuoteId_ViewedAt|NONCLUSTERED|20000|145|1160
+perf.WriteIndexed|IX_WriteIndexed_CountryCode|NONCLUSTERED|20000|76|608
+perf.WriteRandomKey|CIX_WriteRandomKey|CLUSTERED|20000|627|5016
+=== 6d.  Total pages per table -- the storage cost of the indexes ===
+TableName|Structures|TotalPages|TotalKB
+---------|----------|----------|-------
+perf.WriteIndexed|3|647|5176
+perf.WriteRandomKey|1|627|5016
+perf.WriteClustered|1|426|3408
+perf.WriteHeap|1|423|3384
+=== 6e.  Fragmentation: a sequential clustering key against a GUID ===
+TableName|IndexName|IndexType|page_count|AvgPageFullnessPct|FragmentationPct
+---------|---------|---------|----------|------------------|----------------
+perf.WriteClustered|CIX_WriteClustered|CLUSTERED INDEX|422|98.80|4.74
+perf.WriteHeap|(heap)|HEAP|422|98.80|1.89
+perf.WriteIndexed|CIX_WriteIndexed|CLUSTERED INDEX|422|98.80|4.74
+perf.WriteIndexed|IX_WriteIndexed_QuoteId_ViewedAt|NONCLUSTERED INDEX|143|50.09|97.90
+perf.WriteIndexed|IX_WriteIndexed_CountryCode|NONCLUSTERED INDEX|74|84.46|77.03
+perf.WriteRandomKey|CIX_WriteRandomKey|CLUSTERED INDEX|622|67.03|99.36
+Write-cost measurement complete.
