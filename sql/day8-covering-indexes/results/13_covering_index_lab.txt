@@ -1,0 +1,232 @@
+﻿Changed database context to 'QuotesLab'.
+=== 1.  The starting index: a real one, with no INCLUDE list ===
+IndexName|IndexType|IsUnique|KeyColumns|IncludedCols|UsedPages|UsedMB
+---------|---------|--------|----------|------------|---------|------
+CIX_QuoteView_ViewedAt|CLUSTERED|1|ViewedAt, ViewId|-|1948|15.22
+IX_QuoteView_QuoteId_ViewedAt|NONCLUSTERED|0|QuoteId, ViewedAt DESC, ViewId DESC|DwellSeconds|390|3.05
+IX_QuoteView_CountryCode|NONCLUSTERED|0|CountryCode|-|295|2.30
+IX_QuoteView_UserId_ViewedAt|NONCLUSTERED|0|UserId, ViewedAt DESC, ViewId DESC|-|341|2.66
+--- 1a.  The arithmetic that decides whether a lookup plan is viable ---
+MatchedRows|ClusteredPages|CliffAtRoughly
+-----------|--------------|--------------
+219|1948|649
+ 
+############################################################
+### BEFORE - IX_QuoteView_UserId_ViewedAt, not covering   ###
+############################################################
+--- 3a.  SET STATISTICS IO ON, one execution. This is the record. ---
+DeviceType|CountryCode|Views|AvgDwell
+----------|-----------|-----|--------
+mobile|IN|74|143.43
+desktop|IN|43|131.70
+mobile|US|23|173.17
+desktop|US|18|149.50
+mobile|DE|11|173.73
+mobile|GB|11|165.91
+desktop|GB|9|172.89
+tablet|IN|8|141.00
+desktop|DE|6|124.83
+mobile|BR|5|147.60
+desktop|BR|4|185.00
+desktop|JP|2|174.50
+mobile|JP|2|88.50
+tablet|GB|2|131.50
+tablet|DE|1|130.00
+Table 'Worktable'. Scan count 0, logical reads 0, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'QuoteView'. Scan count 5, logical reads 696, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+--- 3b.  Reads and key-lookup count, into perf.CoverLog ---
+DeviceType|CountryCode|Views|AvgDwell
+----------|-----------|-----|--------
+mobile|IN|74|143.43
+desktop|IN|43|131.70
+mobile|US|23|173.17
+desktop|US|18|149.50
+mobile|DE|11|173.73
+mobile|GB|11|165.91
+desktop|GB|9|172.89
+tablet|IN|8|141.00
+desktop|DE|6|124.83
+mobile|BR|5|147.60
+desktop|BR|4|185.00
+desktop|JP|2|174.50
+mobile|JP|2|88.50
+tablet|GB|2|131.50
+tablet|DE|1|130.00
+DeviceType|CountryCode|Views|AvgDwell
+----------|-----------|-----|--------
+mobile|IN|74|143.43
+desktop|IN|43|131.70
+mobile|US|23|173.17
+desktop|US|18|149.50
+mobile|DE|11|173.73
+mobile|GB|11|165.91
+desktop|GB|9|172.89
+tablet|IN|8|141.00
+desktop|DE|6|124.83
+mobile|BR|5|147.60
+desktop|BR|4|185.00
+desktop|JP|2|174.50
+mobile|JP|2|88.50
+tablet|GB|2|131.50
+tablet|DE|1|130.00
+ 
+=== 4.  BEFORE plan -- look for LOOKUP, and Executes = the matched rows ===
+DeviceType|CountryCode|Views|AvgDwell
+----------|-----------|-----|--------
+mobile|IN|74|143.43
+desktop|IN|43|131.70
+mobile|US|23|173.17
+desktop|US|18|149.50
+mobile|DE|11|173.73
+mobile|GB|11|165.91
+desktop|GB|9|172.89
+tablet|IN|8|141.00
+desktop|DE|6|124.83
+mobile|BR|5|147.60
+desktop|BR|4|185.00
+desktop|JP|2|174.50
+mobile|JP|2|88.50
+tablet|GB|2|131.50
+tablet|DE|1|130.00
+Rows|Executes|StmtText|StmtId|NodeId|Parent|PhysicalOp|LogicalOp|Argument|DefinedValues|EstimateRows|EstimateIO|EstimateCPU|AvgRowSize|TotalSubtreeCost|OutputList|Warnings|Type|Parallel|EstimateExecutions
+----|--------|--------|------|------|------|----------|---------|--------|-------------|------------|----------|-----------|----------|----------------|----------|--------|----|--------|------------------
+15|1|SELECT
+        v.DeviceType,
+        v.CountryCode,
+        Views    = COUNT(*),
+        AvgDwell = CONVERT(decimal(8,2), AVG(v.DwellSeconds * 1.0))
+    FROM perf.QuoteView AS v
+    WHERE v.UserId IN (137, 842, 1699, 2001, 2444)
+    GROUP BY v.DeviceType, v.CountryCode
+    ORDER BY Views DESC, v.DeviceType, v.CountryCode
+    OPTION (MAXDOP 1)|1|1|0|NULL|NULL|NULL|NULL|17.682238|NULL|NULL|NULL|0.66591871|NULL|NULL|SELECT|0|NULL
+15|1|  |--Sort(ORDER BY:([Expr1001] DESC, [v].[DeviceType] ASC, [v].[CountryCode] ASC))|1|2|1|Sort|Sort|ORDER BY:([Expr1001] DESC, [v].[DeviceType] ASC, [v].[CountryCode] ASC)|NULL|17.682238|1.1261261E-2|2.1434361E-4|28|0.66591871|[v].[CountryCode], [v].[DeviceType], [Expr1001], [Expr1003]|NULL|PLAN_ROW|0|1.0
+0|0|       |--Compute Scalar(DEFINE:([Expr1003]=CONVERT(decimal(8,2),[Expr1002],0)))|1|3|2|Compute Scalar|Compute Scalar|DEFINE:([Expr1003]=CONVERT(decimal(8,2),[Expr1002],0))|[Expr1003]=CONVERT(decimal(8,2),[Expr1002],0)|17.682238|0.0|1.7682237E-6|28|0.65444314|[v].[CountryCode], [v].[DeviceType], [Expr1001], [Expr1003]|NULL|PLAN_ROW|0|1.0
+0|0|            |--Compute Scalar(DEFINE:([Expr1001]=CONVERT_IMPLICIT(int,[Expr1012],0), [Expr1002]=CASE WHEN [Expr1013]=(0) THEN NULL ELSE [Expr1014]/CONVERT_IMPLICIT(numeric(19,0),[Expr1013],0) END))|1|4|3|Compute Scalar|Compute Scalar|DEFINE:([Expr1001]=CONVERT_IMPLICIT(int,[Expr1012],0), [Expr1002]=CASE WHEN [Expr1013]=(0) THEN NULL ELSE [Expr1014]/CONVERT_IMPLICIT(numeric(19,0),[Expr1013],0) END)|[Expr1001]=CONVERT_IMPLICIT(int,[Expr1012],0), [Expr1002]=CASE WHEN [Expr1013]=(0) THEN NULL ELSE [Expr1014]/CONVERT_IMPLICIT(numeric(19,0),[Expr1013],0) END|17.682238|0.0|0.0|40|0.65444136|[v].[CountryCode], [v].[DeviceType], [Expr1001], [Expr1002]|NULL|PLAN_ROW|0|1.0
+15|1|                 |--Stream Aggregate(GROUP BY:([v].[CountryCode], [v].[DeviceType]) DEFINE:([Expr1012]=Count(*), [Expr1013]=COUNT_BIG([Expr1004]), [Expr1014]=SUM([Expr1004])))|1|5|4|Stream Aggregate|Aggregate|GROUP BY:([v].[CountryCode], [v].[DeviceType])|[Expr1012]=Count(*), [Expr1013]=COUNT_BIG([Expr1004]), [Expr1014]=SUM([Expr1004])|17.682238|0.0|1.3160592E-4|40|0.65444136|[v].[CountryCode], [v].[DeviceType], [Expr1012], [Expr1013], [Expr1014]|NULL|PLAN_ROW|0|1.0
+219|1|                      |--Sort(ORDER BY:([v].[CountryCode] ASC, [v].[DeviceType] ASC))|1|6|5|Sort|Sort|ORDER BY:([v].[CountryCode] ASC, [v].[DeviceType] ASC)|NULL|204.60802|1.1261261E-2|2.5503484E-3|28|0.65430975|[v].[CountryCode], [v].[DeviceType], [Expr1004]|NULL|PLAN_ROW|0|1.0
+0|0|                           |--Compute Scalar(DEFINE:([Expr1004]=CONVERT_IMPLICIT(numeric(10,0),[QuotesLab].[perf].[QuoteView].[DwellSeconds] as [v].[DwellSeconds],0)*(1.0)))|1|7|6|Compute Scalar|Compute Scalar|DEFINE:([Expr1004]=CONVERT_IMPLICIT(numeric(10,0),[QuotesLab].[perf].[QuoteView].[DwellSeconds] as [v].[DwellSeconds],0)*(1.0))|[Expr1004]=CONVERT_IMPLICIT(numeric(10,0),[QuotesLab].[perf].[QuoteView].[DwellSeconds] as [v].[DwellSeconds],0)*(1.0)|204.60802|0.0|2.04608E-5|28|0.64049816|[v].[CountryCode], [v].[DeviceType], [Expr1004]|NULL|PLAN_ROW|0|1.0
+219|1|                                |--Nested Loops(Inner Join, OUTER REFERENCES:([v].[ViewId], [v].[ViewedAt], [Expr1011]) WITH UNORDERED PREFETCH)|1|8|7|Nested Loops|Inner Join|OUTER REFERENCES:([v].[ViewId], [v].[ViewedAt], [Expr1011]) WITH UNORDERED PREFETCH|NULL|204.60802|0.0|8.5526152E-4|23|0.64047766|[v].[CountryCode], [v].[DeviceType], [v].[DwellSeconds]|NULL|PLAN_ROW|0|1.0
+219|1|                                     |--Index Seek(OBJECT:([QuotesLab].[perf].[QuoteView].[IX_QuoteView_UserId_ViewedAt] AS [v]), SEEK:([v].[UserId]=(137) OR [v].[UserId]=(842) OR [v].[UserId]=(1699) OR [v].[UserId]=(2001) OR [v].[UserId]=(2444)) ORDERED FORWARD)|1|10|8|Index Seek|Index Seek|OBJECT:([QuotesLab].[perf].[QuoteView].[IX_QuoteView_UserId_ViewedAt] AS [v]), SEEK:([v].[UserId]=(137) OR [v].[UserId]=(842) OR [v].[UserId]=(1699) OR [v].[UserId]=(2001) OR [v].[UserId]=(2444)) ORDERED FORWARD|[v].[ViewId], [v].[ViewedAt]|204.60802|0.003125|3.8206883E-4|22|3.5070688E-3|[v].[ViewId], [v].[ViewedAt]|NULL|PLAN_ROW|0|1.0
+219|219|                                     |--Clustered Index Seek(OBJECT:([QuotesLab].[perf].[QuoteView].[CIX_QuoteView_ViewedAt] AS [v]), SEEK:([v].[ViewedAt]=[QuotesLab].[perf].[QuoteView].[ViewedAt] as [v].[ViewedAt] AND [v].[ViewId]=[QuotesLab].[perf].[QuoteView].[ViewId] as [v].[ViewId]) LOOKUP ORDERED FORWARD)|1|12|8|Clustered Index Seek|Clustered Index Seek|OBJECT:([QuotesLab].[perf].[QuoteView].[CIX_QuoteView_ViewedAt] AS [v]), SEEK:([v].[ViewedAt]=[QuotesLab].[perf].[QuoteView].[ViewedAt] as [v].[ViewedAt] AND [v].[ViewId]=[QuotesLab].[perf].[QuoteView].[ViewId] as [v].[ViewId]) LOOKUP ORDERED FORWARD|[v].[CountryCode], [v].[DeviceType], [v].[DwellSeconds]|1.0|0.003125|0.0001581|22|0.63611531|[v].[CountryCode], [v].[DeviceType], [v].[DwellSeconds]|NULL|PLAN_ROW|0|204.60802
+ 
+=== 5.  Creating the covering index ===
+IndexName|IndexType|IsUnique|KeyColumns|IncludedCols|UsedPages|UsedMB
+---------|---------|--------|----------|------------|---------|------
+CIX_QuoteView_ViewedAt|CLUSTERED|1|ViewedAt, ViewId|-|1948|15.22
+IX_QuoteView_QuoteId_ViewedAt|NONCLUSTERED|0|QuoteId, ViewedAt DESC, ViewId DESC|DwellSeconds|390|3.05
+IX_QuoteView_CountryCode|NONCLUSTERED|0|CountryCode|-|295|2.30
+IX_QuoteView_UserId_ViewedAt|NONCLUSTERED|0|UserId, ViewedAt DESC, ViewId DESC|-|341|2.66
+IX_QuoteView_UserId_ViewedAt_Covering|NONCLUSTERED|0|UserId, ViewedAt DESC, ViewId DESC|CountryCode, DeviceType, DwellSeconds|544|4.25
+ 
+############################################################
+### AFTER - the same query, against the covering index    ###
+############################################################
+--- 6a.  SET STATISTICS IO ON, one execution ---
+DeviceType|CountryCode|Views|AvgDwell
+----------|-----------|-----|--------
+mobile|IN|74|143.43
+desktop|IN|43|131.70
+mobile|US|23|173.17
+desktop|US|18|149.50
+mobile|DE|11|173.73
+mobile|GB|11|165.91
+desktop|GB|9|172.89
+tablet|IN|8|141.00
+desktop|DE|6|124.83
+mobile|BR|5|147.60
+desktop|BR|4|185.00
+desktop|JP|2|174.50
+mobile|JP|2|88.50
+tablet|GB|2|131.50
+tablet|DE|1|130.00
+Table 'Worktable'. Scan count 0, logical reads 0, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'QuoteView'. Scan count 5, logical reads 16, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+--- 6b.  Reads and key-lookup count ---
+DeviceType|CountryCode|Views|AvgDwell
+----------|-----------|-----|--------
+mobile|IN|74|143.43
+desktop|IN|43|131.70
+mobile|US|23|173.17
+desktop|US|18|149.50
+mobile|DE|11|173.73
+mobile|GB|11|165.91
+desktop|GB|9|172.89
+tablet|IN|8|141.00
+desktop|DE|6|124.83
+mobile|BR|5|147.60
+desktop|BR|4|185.00
+desktop|JP|2|174.50
+mobile|JP|2|88.50
+tablet|GB|2|131.50
+tablet|DE|1|130.00
+DeviceType|CountryCode|Views|AvgDwell
+----------|-----------|-----|--------
+mobile|IN|74|143.43
+desktop|IN|43|131.70
+mobile|US|23|173.17
+desktop|US|18|149.50
+mobile|DE|11|173.73
+mobile|GB|11|165.91
+desktop|GB|9|172.89
+tablet|IN|8|141.00
+desktop|DE|6|124.83
+mobile|BR|5|147.60
+desktop|BR|4|185.00
+desktop|JP|2|174.50
+mobile|JP|2|88.50
+tablet|GB|2|131.50
+tablet|DE|1|130.00
+ 
+=== 7.  AFTER plan -- no Nested Loops, no LOOKUP, no clustered index ===
+DeviceType|CountryCode|Views|AvgDwell
+----------|-----------|-----|--------
+mobile|IN|74|143.43
+desktop|IN|43|131.70
+mobile|US|23|173.17
+desktop|US|18|149.50
+mobile|DE|11|173.73
+mobile|GB|11|165.91
+desktop|GB|9|172.89
+tablet|IN|8|141.00
+desktop|DE|6|124.83
+mobile|BR|5|147.60
+desktop|BR|4|185.00
+desktop|JP|2|174.50
+mobile|JP|2|88.50
+tablet|GB|2|131.50
+tablet|DE|1|130.00
+Rows|Executes|StmtText|StmtId|NodeId|Parent|PhysicalOp|LogicalOp|Argument|DefinedValues|EstimateRows|EstimateIO|EstimateCPU|AvgRowSize|TotalSubtreeCost|OutputList|Warnings|Type|Parallel|EstimateExecutions
+----|--------|--------|------|------|------|----------|---------|--------|-------------|------------|----------|-----------|----------|----------------|----------|--------|----|--------|------------------
+15|1|SELECT
+        v.DeviceType,
+        v.CountryCode,
+        Views    = COUNT(*),
+        AvgDwell = CONVERT(decimal(8,2), AVG(v.DwellSeconds * 1.0))
+    FROM perf.QuoteView AS v
+    WHERE v.UserId IN (137, 842, 1699, 2001, 2444)
+    GROUP BY v.DeviceType, v.CountryCode
+    ORDER BY Views DESC, v.DeviceType, v.CountryCode
+    OPTION (MAXDOP 1)|1|1|0|NULL|NULL|NULL|NULL|17.682238|NULL|NULL|NULL|2.9688859E-2|NULL|NULL|SELECT|0|NULL
+15|1|  |--Sort(ORDER BY:([Expr1001] DESC, [v].[DeviceType] ASC, [v].[CountryCode] ASC))|1|2|1|Sort|Sort|ORDER BY:([Expr1001] DESC, [v].[DeviceType] ASC, [v].[CountryCode] ASC)|NULL|17.682238|1.1261261E-2|2.1434361E-4|28|2.9688859E-2|[v].[CountryCode], [v].[DeviceType], [Expr1001], [Expr1003]|NULL|PLAN_ROW|0|1.0
+0|0|       |--Compute Scalar(DEFINE:([Expr1003]=CONVERT(decimal(8,2),[Expr1002],0)))|1|3|2|Compute Scalar|Compute Scalar|DEFINE:([Expr1003]=CONVERT(decimal(8,2),[Expr1002],0))|[Expr1003]=CONVERT(decimal(8,2),[Expr1002],0)|17.682238|0.0|1.7682237E-6|28|1.8213253E-2|[v].[CountryCode], [v].[DeviceType], [Expr1001], [Expr1003]|NULL|PLAN_ROW|0|1.0
+0|0|            |--Compute Scalar(DEFINE:([Expr1001]=CONVERT_IMPLICIT(int,[Expr1011],0), [Expr1002]=CASE WHEN [Expr1012]=(0) THEN NULL ELSE [Expr1013]/CONVERT_IMPLICIT(numeric(19,0),[Expr1012],0) END))|1|4|3|Compute Scalar|Compute Scalar|DEFINE:([Expr1001]=CONVERT_IMPLICIT(int,[Expr1011],0), [Expr1002]=CASE WHEN [Expr1012]=(0) THEN NULL ELSE [Expr1013]/CONVERT_IMPLICIT(numeric(19,0),[Expr1012],0) END)|[Expr1001]=CONVERT_IMPLICIT(int,[Expr1011],0), [Expr1002]=CASE WHEN [Expr1012]=(0) THEN NULL ELSE [Expr1013]/CONVERT_IMPLICIT(numeric(19,0),[Expr1012],0) END|17.682238|0.0|0.0|40|1.8211486E-2|[v].[CountryCode], [v].[DeviceType], [Expr1001], [Expr1002]|NULL|PLAN_ROW|0|1.0
+15|1|                 |--Stream Aggregate(GROUP BY:([v].[CountryCode], [v].[DeviceType]) DEFINE:([Expr1011]=Count(*), [Expr1012]=COUNT_BIG([Expr1004]), [Expr1013]=SUM([Expr1004])))|1|5|4|Stream Aggregate|Aggregate|GROUP BY:([v].[CountryCode], [v].[DeviceType])|[Expr1011]=Count(*), [Expr1012]=COUNT_BIG([Expr1004]), [Expr1013]=SUM([Expr1004])|17.682238|0.0|1.3160592E-4|40|1.8211486E-2|[v].[CountryCode], [v].[DeviceType], [Expr1011], [Expr1012], [Expr1013]|NULL|PLAN_ROW|0|1.0
+219|1|                      |--Sort(ORDER BY:([v].[CountryCode] ASC, [v].[DeviceType] ASC))|1|6|5|Sort|Sort|ORDER BY:([v].[CountryCode] ASC, [v].[DeviceType] ASC)|NULL|204.60802|1.1261261E-2|2.5503484E-3|28|1.8079881E-2|[v].[CountryCode], [v].[DeviceType], [Expr1004]|NULL|PLAN_ROW|0|1.0
+0|0|                           |--Compute Scalar(DEFINE:([Expr1004]=CONVERT_IMPLICIT(numeric(10,0),[QuotesLab].[perf].[QuoteView].[DwellSeconds] as [v].[DwellSeconds],0)*(1.0)))|1|7|6|Compute Scalar|Compute Scalar|DEFINE:([Expr1004]=CONVERT_IMPLICIT(numeric(10,0),[QuotesLab].[perf].[QuoteView].[DwellSeconds] as [v].[DwellSeconds],0)*(1.0))|[Expr1004]=CONVERT_IMPLICIT(numeric(10,0),[QuotesLab].[perf].[QuoteView].[DwellSeconds] as [v].[DwellSeconds],0)*(1.0)|204.60802|0.0|2.04608E-5|28|4.2682705E-3|[v].[CountryCode], [v].[DeviceType], [Expr1004]|NULL|PLAN_ROW|0|1.0
+219|1|                                |--Index Seek(OBJECT:([QuotesLab].[perf].[QuoteView].[IX_QuoteView_UserId_ViewedAt_Covering] AS [v]), SEEK:([v].[UserId]=(137) OR [v].[UserId]=(842) OR [v].[UserId]=(1699) OR [v].[UserId]=(2001) OR [v].[UserId]=(2444)) ORDERED FORWARD)|1|8|7|Index Seek|Index Seek|OBJECT:([QuotesLab].[perf].[QuoteView].[IX_QuoteView_UserId_ViewedAt_Covering] AS [v]), SEEK:([v].[UserId]=(137) OR [v].[UserId]=(842) OR [v].[UserId]=(1699) OR [v].[UserId]=(2001) OR [v].[UserId]=(2444)) ORDERED FORWARD|[v].[CountryCode], [v].[DeviceType], [v].[DwellSeconds]|204.60802|3.8657407E-3|3.8206883E-4|23|4.2478098E-3|[v].[CountryCode], [v].[DeviceType], [v].[DwellSeconds]|NULL|PLAN_ROW|0|1.0
+ 
+=== 8a.  Logical reads and key lookups, before and after ===
+QueryName|BeforeReads|AfterReads|ReadsSaved|BeforeLookups|AfterLookups|TimesCheaper
+---------|-----------|----------|----------|-------------|------------|------------
+Q6 account activity mix|716|16|700|219|0|44.75
+=== 8b.  What the three INCLUDE columns cost in space ===
+IndexName|IndexLevel|page_count|record_count|AvgRecordBytes|AvgPageFullnessPct
+---------|----------|----------|------------|--------------|------------------
+IX_QuoteView_UserId_ViewedAt|0|320|100000|23.00|96.50
+IX_QuoteView_UserId_ViewedAt|1|3|320|26.00|36.88
+IX_QuoteView_UserId_ViewedAt|2|1|3|26.00|1.01
+IX_QuoteView_UserId_ViewedAt_Covering|0|518|100000|39.34|98.58
+IX_QuoteView_UserId_ViewedAt_Covering|1|8|518|26.00|22.37
+IX_QuoteView_UserId_ViewedAt_Covering|2|1|8|26.00|2.74
+Covering index lab complete. Run 14_include_tradeoffs.sql next.

@@ -129,6 +129,7 @@ LocalDB instance is left alone.
 | `day7-window-functions/` | Day 7, piece 2 — ranking, `LAG`/`LEAD`, running totals, and window frames |
 | `day7-set-operations/` | Day 7, piece 3 — `UNION`/`INTERSECT`/`EXCEPT`, and translating a vague spec |
 | `day8-indexes/` | Day 8, piece 1 — clustered vs non-clustered, measured over 100,000 rows |
+| `day8-covering-indexes/` | Day 8, piece 2 — covering indexes, `INCLUDE`, and killing a key lookup |
 | `*/results/` | Captured output from the last run. Committed, because it is the exercises' evidence |
 | `docker-compose.yml` | The SQL Server container |
 | `run-lab.ps1` | Start, apply, run, capture |

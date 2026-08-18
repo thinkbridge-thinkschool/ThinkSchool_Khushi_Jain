@@ -473,6 +473,14 @@ query by 20–40 pages and overstates a three-page covering seek by 8×. The
 per-table `STATISTICS IO` output is the record; if the two disagree, believe
 `STATISTICS IO`.
 
+**One column of `12_write_cost.txt` is not reproducible.** Everything on the read
+side has come back byte-identical across four rebuilds, and so have the log-byte,
+page-count and ratio figures. `LogicalReads` in section 6a does not: it moves by
+up to about 1.4% between runs, because the pages an insert touches to navigate
+and extend an index depend on allocation and read-ahead behaviour that is not
+fully determined by the row set. The log bytes are the measure to quote for write
+cost; treat the read column there as indicative.
+
 **`MAXDOP 1` is a measurement decision, not a recommendation.** Real queries on
 this shape of table would go parallel, and the plan chosen at DOP 8 is not always
 the serial plan with more threads.

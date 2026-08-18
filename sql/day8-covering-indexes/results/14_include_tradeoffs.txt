@@ -1,0 +1,206 @@
+﻿Changed database context to 'QuotesLab'.
+=== 1.  Creating the all-in-the-key variant for comparison ===
+--- 1a.  Per level: the leaf agrees, the non-leaf row width does not ---
+IndexName|IndexLevel|LevelKind|page_count|record_count|AvgRecordBytes|PageFullnessPct
+---------|----------|---------|----------|------------|--------------|---------------
+IX_Cover_KeyedColumns|0|leaf|513|100000|39.34|99.54
+IX_Cover_KeyedColumns|1|non-leaf|3|513|42.36|93.69
+IX_Cover_KeyedColumns|2|non-leaf|1|3|42.00|1.61
+IX_QuoteView_UserId_ViewedAt_Covering|0|leaf|518|100000|39.34|98.58
+IX_QuoteView_UserId_ViewedAt_Covering|1|non-leaf|8|518|26.00|22.37
+IX_QuoteView_UserId_ViewedAt_Covering|2|non-leaf|1|8|26.00|2.74
+ 
+=== 2.  One extra column in the SELECT list, with the covering index in place ===
+DeviceType|CountryCode|Views|AvgDwell|DistinctReferrers
+----------|-----------|-----|--------|-----------------
+mobile|IN|74|143.43|4
+desktop|IN|43|131.70|4
+mobile|US|23|173.17|4
+desktop|US|18|149.50|4
+mobile|DE|11|173.73|4
+mobile|GB|11|165.91|3
+desktop|GB|9|172.89|3
+tablet|IN|8|141.00|4
+desktop|DE|6|124.83|2
+mobile|BR|5|147.60|3
+desktop|BR|4|185.00|2
+desktop|JP|2|174.50|1
+mobile|JP|2|88.50|2
+tablet|GB|2|131.50|2
+tablet|DE|1|130.00|1
+Table 'Worktable'. Scan count 0, logical reads 0, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'QuoteView'. Scan count 5, logical reads 696, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+DeviceType|CountryCode|Views|AvgDwell|DistinctReferrers
+----------|-----------|-----|--------|-----------------
+mobile|IN|74|143.43|4
+desktop|IN|43|131.70|4
+mobile|US|23|173.17|4
+desktop|US|18|149.50|4
+mobile|DE|11|173.73|4
+mobile|GB|11|165.91|3
+desktop|GB|9|172.89|3
+tablet|IN|8|141.00|4
+desktop|DE|6|124.83|2
+mobile|BR|5|147.60|3
+desktop|BR|4|185.00|2
+desktop|JP|2|174.50|1
+mobile|JP|2|88.50|2
+tablet|GB|2|131.50|2
+tablet|DE|1|130.00|1
+DeviceType|CountryCode|Views|AvgDwell|DistinctReferrers
+----------|-----------|-----|--------|-----------------
+mobile|IN|74|143.43|4
+desktop|IN|43|131.70|4
+mobile|US|23|173.17|4
+desktop|US|18|149.50|4
+mobile|DE|11|173.73|4
+mobile|GB|11|165.91|3
+desktop|GB|9|172.89|3
+tablet|IN|8|141.00|4
+desktop|DE|6|124.83|2
+mobile|BR|5|147.60|3
+desktop|BR|4|185.00|2
+desktop|JP|2|174.50|1
+mobile|JP|2|88.50|2
+tablet|GB|2|131.50|2
+tablet|DE|1|130.00|1
+ 
+=== 3a.  A heap, a non-covering index, and a RID Lookup ===
+ViewId|ViewedAt|DeviceType|DwellSeconds
+------|--------|----------|------------
+5358|2026-01-05 20:04:06.663|tablet|296
+6093|2026-01-06 11:59:36.421|mobile|283
+7952|2026-01-08 04:16:18.821|mobile|62
+10799|2026-01-10 17:57:24.883|desktop|152
+11228|2026-01-11 03:15:06.433|desktop|18
+12479|2026-01-12 06:21:24.307|mobile|167
+16407|2026-01-15 19:27:48.627|desktop|98
+18618|2026-01-17 19:22:06.960|desktop|66
+19920|2026-01-18 23:34:42.136|tablet|114
+19973|2026-01-19 00:43:36.140|desktop|148
+Table 'Worktable'. Scan count 0, logical reads 0, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'CoverHeap'. Scan count 1, logical reads 12, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Rows|Executes|StmtText|StmtId|NodeId|Parent|PhysicalOp|LogicalOp|Argument|DefinedValues|EstimateRows|EstimateIO|EstimateCPU|AvgRowSize|TotalSubtreeCost|OutputList|Warnings|Type|Parallel|EstimateExecutions
+----|--------|--------|------|------|------|----------|---------|--------|-------------|------------|----------|-----------|----------|----------------|----------|--------|----|--------|------------------
+10|1|SELECT
+    v.ViewId,
+    v.ViewedAt,
+    v.DeviceType,
+    v.DwellSeconds
+FROM perf.CoverHeap AS v
+WHERE v.CountryCode = 'MT'
+ORDER BY v.ViewId
+OPTION (MAXDOP 1, RECOMPILE)|1|1|0|NULL|NULL|NULL|NULL|10.0|NULL|NULL|NULL|0.04347863|NULL|NULL|SELECT|0|NULL
+10|1|  |--Sort(ORDER BY:([v].[ViewId] ASC))|1|2|1|Sort|Sort|ORDER BY:([v].[ViewId] ASC)|NULL|10.0|1.1261261E-2|1.5185708E-4|35|0.04347863|[v].[ViewId], [v].[ViewedAt], [v].[DeviceType], [v].[DwellSeconds]|NULL|PLAN_ROW|0|1.0
+10|1|       |--Nested Loops(Inner Join, OUTER REFERENCES:([Bmk1000]))|1|3|2|Nested Loops|Inner Join|OUTER REFERENCES:([Bmk1000])|NULL|10.0|0.0|4.1800002E-5|35|3.2065511E-2|[v].[ViewId], [v].[ViewedAt], [v].[DeviceType], [v].[DwellSeconds]|NULL|PLAN_ROW|0|1.0
+10|1|            |--Index Seek(OBJECT:([QuotesLab].[perf].[CoverHeap].[IX_CoverHeap_CountryCode] AS [v]), SEEK:([v].[CountryCode]='MT') ORDERED FORWARD)|1|4|3|Index Seek|Index Seek|OBJECT:([QuotesLab].[perf].[CoverHeap].[IX_CoverHeap_CountryCode] AS [v]), SEEK:([v].[CountryCode]='MT') ORDERED FORWARD|[Bmk1000]|10.0|0.003125|0.000168|15|3.2929999E-3|[Bmk1000]|NULL|PLAN_ROW|0|1.0
+10|10|            |--RID Lookup(OBJECT:([QuotesLab].[perf].[CoverHeap] AS [v]), SEEK:([Bmk1000]=[Bmk1000]) LOOKUP ORDERED FORWARD)|1|6|3|RID Lookup|RID Lookup|OBJECT:([QuotesLab].[perf].[CoverHeap] AS [v]), SEEK:([Bmk1000]=[Bmk1000]) LOOKUP ORDERED FORWARD|[v].[ViewId], [v].[ViewedAt], [v].[DeviceType], [v].[DwellSeconds]|1.0|0.003125|0.0001581|35|2.8730711E-2|[v].[ViewId], [v].[ViewedAt], [v].[DeviceType], [v].[DwellSeconds]|NULL|PLAN_ROW|0|10.0
+--- 3b.  The same query once the index covers it ---
+Table 'CoverHeap'. Scan count 1, logical reads 113, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+ViewId|ViewedAt|DeviceType|DwellSeconds
+------|--------|----------|------------
+5358|2026-01-05 20:04:06.663|tablet|296
+6093|2026-01-06 11:59:36.421|mobile|283
+7952|2026-01-08 04:16:18.821|mobile|62
+10799|2026-01-10 17:57:24.883|desktop|152
+11228|2026-01-11 03:15:06.433|desktop|18
+12479|2026-01-12 06:21:24.307|mobile|167
+16407|2026-01-15 19:27:48.627|desktop|98
+18618|2026-01-17 19:22:06.960|desktop|66
+19920|2026-01-18 23:34:42.136|tablet|114
+19973|2026-01-19 00:43:36.140|desktop|148
+Table 'Worktable'. Scan count 0, logical reads 0, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'CoverHeap'. Scan count 1, logical reads 2, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Rows|Executes|StmtText|StmtId|NodeId|Parent|PhysicalOp|LogicalOp|Argument|DefinedValues|EstimateRows|EstimateIO|EstimateCPU|AvgRowSize|TotalSubtreeCost|OutputList|Warnings|Type|Parallel|EstimateExecutions
+----|--------|--------|------|------|------|----------|---------|--------|-------------|------------|----------|-----------|----------|----------------|----------|--------|----|--------|------------------
+10|1|SELECT
+    v.ViewId,
+    v.ViewedAt,
+    v.DeviceType,
+    v.DwellSeconds
+FROM perf.CoverHeap AS v
+WHERE v.CountryCode = 'MT'
+ORDER BY v.ViewId
+OPTION (MAXDOP 1, RECOMPILE)|1|1|0|NULL|NULL|NULL|NULL|10.0|NULL|NULL|NULL|1.4706118E-2|NULL|NULL|SELECT|0|NULL
+10|1|  |--Sort(ORDER BY:([v].[ViewId] ASC))|1|2|1|Sort|Sort|ORDER BY:([v].[ViewId] ASC)|NULL|10.0|1.1261261E-2|1.5185708E-4|35|1.4706118E-2|[v].[ViewId], [v].[ViewedAt], [v].[DeviceType], [v].[DwellSeconds]|NULL|PLAN_ROW|0|1.0
+10|1|       |--Index Seek(OBJECT:([QuotesLab].[perf].[CoverHeap].[IX_CoverHeap_CountryCode_Covering] AS [v]), SEEK:([v].[CountryCode]='MT') ORDERED FORWARD)|1|3|2|Index Seek|Index Seek|OBJECT:([QuotesLab].[perf].[CoverHeap].[IX_CoverHeap_CountryCode_Covering] AS [v]), SEEK:([v].[CountryCode]='MT') ORDERED FORWARD|[v].[ViewId], [v].[ViewedAt], [v].[DeviceType], [v].[DwellSeconds]|10.0|0.003125|0.000168|35|3.2929999E-3|[v].[ViewId], [v].[ViewedAt], [v].[DeviceType], [v].[DwellSeconds]|NULL|PLAN_ROW|0|1.0
+ 
+=== 4.  The fat covering index: five INCLUDEs, two of them varchar(120) ===
+DeviceType|CountryCode|Views|AvgDwell|DistinctReferrers
+----------|-----------|-----|--------|-----------------
+mobile|IN|74|143.43|4
+desktop|IN|43|131.70|4
+mobile|US|23|173.17|4
+desktop|US|18|149.50|4
+mobile|DE|11|173.73|4
+mobile|GB|11|165.91|3
+desktop|GB|9|172.89|3
+tablet|IN|8|141.00|4
+desktop|DE|6|124.83|2
+mobile|BR|5|147.60|3
+desktop|BR|4|185.00|2
+desktop|JP|2|174.50|1
+mobile|JP|2|88.50|2
+tablet|GB|2|131.50|2
+tablet|DE|1|130.00|1
+Table 'Worktable'. Scan count 0, logical reads 0, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'QuoteView'. Scan count 5, logical reads 23, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+DeviceType|CountryCode|Views|AvgDwell|DistinctReferrers
+----------|-----------|-----|--------|-----------------
+mobile|IN|74|143.43|4
+desktop|IN|43|131.70|4
+mobile|US|23|173.17|4
+desktop|US|18|149.50|4
+mobile|DE|11|173.73|4
+mobile|GB|11|165.91|3
+desktop|GB|9|172.89|3
+tablet|IN|8|141.00|4
+desktop|DE|6|124.83|2
+mobile|BR|5|147.60|3
+desktop|BR|4|185.00|2
+desktop|JP|2|174.50|1
+mobile|JP|2|88.50|2
+tablet|GB|2|131.50|2
+tablet|DE|1|130.00|1
+DeviceType|CountryCode|Views|AvgDwell|DistinctReferrers
+----------|-----------|-----|--------|-----------------
+mobile|IN|74|143.43|4
+desktop|IN|43|131.70|4
+mobile|US|23|173.17|4
+desktop|US|18|149.50|4
+mobile|DE|11|173.73|4
+mobile|GB|11|165.91|3
+desktop|GB|9|172.89|3
+tablet|IN|8|141.00|4
+desktop|DE|6|124.83|2
+mobile|BR|5|147.60|3
+desktop|BR|4|185.00|2
+desktop|JP|2|174.50|1
+mobile|JP|2|88.50|2
+tablet|GB|2|131.50|2
+tablet|DE|1|130.00|1
+--- 4a.  Every non-clustered index on the table, priced ---
+IndexName|KeyColumns|IncludedCols|UsedPages|UsedKB|LeafPages|AvgLeafBytes
+---------|----------|------------|---------|------|---------|------------
+IX_QuoteView_CountryCode|CountryCode|-|295|2360|287|21.00
+IX_QuoteView_UserId_ViewedAt|UserId, ViewedAt DESC, ViewId DESC|-|341|2728|320|23.00
+IX_QuoteView_QuoteId_ViewedAt|QuoteId, ViewedAt DESC, ViewId DESC|DwellSeconds|390|3120|367|27.00
+IX_Cover_KeyedColumns|UserId, ViewedAt DESC, ViewId DESC, DeviceType, CountryCode, DwellSeconds|-|518|4144|513|39.34
+IX_QuoteView_UserId_ViewedAt_Covering|UserId, ViewedAt DESC, ViewId DESC|CountryCode, DeviceType, DwellSeconds|544|4352|518|39.34
+IX_Cover_Fat|UserId, ViewedAt DESC, ViewId DESC|CountryCode, DeviceType, DwellSeconds, Referrer, UserAgent|1850|14800|1817|143.27
+--- 4b.  Reads and lookups across every stage of both scripts ---
+Stage|QueryName|LogicalReads|KeyLookups
+-----|---------|------------|----------
+before|Q6 account activity mix|716|219
+after|Q6 account activity mix|16|0
+un-covered|Q7 same query plus Referrer|716|219
+re-covered|Q7 against the fat index|23|0
+ 
+=== 5.  Dropping everything this piece created ===
+=== 5b.  Final state -- the three indexes from piece 1, unchanged ===
+IndexName|IndexType|IsUnique|KeyColumns|IncludedCols|UsedPages|UsedMB
+---------|---------|--------|----------|------------|---------|------
+CIX_QuoteView_ViewedAt|CLUSTERED|1|ViewedAt, ViewId|-|1948|15.22
+IX_QuoteView_QuoteId_ViewedAt|NONCLUSTERED|0|QuoteId, ViewedAt DESC, ViewId DESC|DwellSeconds|390|3.05
+IX_QuoteView_CountryCode|NONCLUSTERED|0|CountryCode|-|295|2.30
+Covering-index trade-offs complete.

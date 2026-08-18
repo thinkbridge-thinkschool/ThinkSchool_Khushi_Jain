@@ -56,6 +56,7 @@ $joinsResults  = Join-Path $root 'day7-joins-and-ctes\results'
 $windowResults = Join-Path $root 'day7-window-functions\results'
 $setResults    = Join-Path $root 'day7-set-operations\results'
 $indexResults  = Join-Path $root 'day8-indexes\results'
+$coverResults  = Join-Path $root 'day8-covering-indexes\results'
 
 function Invoke-Native {
     # docker writes progress and diagnostics to stderr as a matter of course.
@@ -147,7 +148,7 @@ while ($true) {
 }
 Write-Host 'SQL Server is healthy.'
 
-foreach ($dir in @($joinsResults, $windowResults, $setResults, $indexResults)) {
+foreach ($dir in @($joinsResults, $windowResults, $setResults, $indexResults, $coverResults)) {
     if (-not (Test-Path $dir)) {
         New-Item -ItemType Directory -Path $dir | Out-Null
     }
@@ -223,10 +224,17 @@ Invoke-SqlScript -ContainerPath '/sql/day8-indexes/10_index_lab.sql'     -Result
 Invoke-SqlScript -ContainerPath '/sql/day8-indexes/11_actual_plans.sql'  -ResultDirectory $indexResults -ResultFileName '11_actual_plans.txt'
 Invoke-SqlScript -ContainerPath '/sql/day8-indexes/12_write_cost.sql'    -ResultDirectory $indexResults -ResultFileName '12_write_cost.txt'
 
+# Day 8 piece 2 reads the table and the indexes piece 1 built, so it has to run
+# after 10. 14 drops everything 13 created, leaving perf.QuoteView in the
+# three-index state piece 1 documented and 11 captured its plans against.
+Invoke-SqlScript -ContainerPath '/sql/day8-covering-indexes/13_covering_index_lab.sql' -ResultDirectory $coverResults -ResultFileName '13_covering_index_lab.txt'
+Invoke-SqlScript -ContainerPath '/sql/day8-covering-indexes/14_include_tradeoffs.sql'  -ResultDirectory $coverResults -ResultFileName '14_include_tradeoffs.txt'
+
 Write-Host ''
 Write-Host "Done. Result sets written to:"
 Write-Host "  $joinsResults"
 Write-Host "  $windowResults"
 Write-Host "  $setResults"
 Write-Host "  $indexResults"
+Write-Host "  $coverResults"
 Write-Host 'Remove the container with: ./run-lab.ps1 -Stop'

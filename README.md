@@ -140,7 +140,8 @@ Paths in this section are relative to `sql/`.
 | Task | Where |
 |---|---|
 | Clustered vs non-clustered indexes | `day8-indexes/` — `09_build_dataset.sql`, `10_index_lab.sql`, `11_actual_plans.sql`, `12_write_cost.sql`, `README.md` |
-| Captured result sets | `day8-indexes/results/` |
+| Covering indexes and included columns | `day8-covering-indexes/` — `13_covering_index_lab.sql`, `14_include_tradeoffs.sql`, `README.md` |
+| Captured result sets | `results/` under both folders above |
 
 Day 8 needs 100,000 rows and the Day-7 seed has eighty, so it generates its own
 table in a `perf` schema rather than growing `app.Quote` — which would have

@@ -11,12 +11,12 @@ Scenario|Structure|RowsTouched|LogicalReads|LogKB|LogBytesPerRow|VsHeap
 --------|---------|-----------|------------|-----|--------------|------
 insert 20,000 rows|heap|20000|46801|5315.6|272.2|1.00
 insert 20,000 rows|clustered only|20000|38297|5968.7|305.6|1.12
-insert 20,000 rows|clustered + 2 NC|20000|192106|11708.3|599.5|2.20
-insert 20,000 rows|clustered on a GUID|20000|95210|8989.4|460.3|1.69
-update column in no index|heap|2000|4912|203.2|104.1|1.00
+insert 20,000 rows|clustered + 2 NC|20000|192032|11708.3|599.5|2.20
+insert 20,000 rows|clustered on a GUID|20000|93892|8989.4|460.3|1.69
+update column in no index|heap|2000|4906|203.2|104.1|1.00
 update column in no index|clustered + 2 NC|2000|2555|257.9|132.1|1.27
 update an index key column|heap|2000|4446|203.2|104.1|1.00
-update an index key column|clustered + 2 NC|2000|24873|776.6|397.6|3.82
+update an index key column|clustered + 2 NC|2000|24866|776.6|397.6|3.82
 === 6b.  Index rows written, and leaf pages allocated ===
 TableName|IndexName|IndexType|LeafInserts|LeafUpdates|LeafDeletes|LeafAllocations
 ---------|---------|---------|-----------|-----------|-----------|---------------
