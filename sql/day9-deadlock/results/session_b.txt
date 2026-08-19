@@ -1,0 +1,12 @@
+﻿Changed database context to 'QuotesLab'.
+=== 1. The deadlock: this session takes row 2, then row 1 ===
+--- Holding row 2 ---
+--- Now asking for row 1, which session A holds ---
+--- The victim message ---
+ErrorNumber|ErrorSeverity|ErrorMessage
+-----------|-------------|------------
+1205|13|Transaction (Process ID 61) was deadlocked on lock resources with another process and has been chosen as the deadlock victim. Rerun the transaction.
+ 
+=== 2. The fix: both sessions take row 1 first, then row 2 ===
+--- Asking for row 1 first, so this waits rather than deadlocking ---
+--- Committed, no deadlock ---

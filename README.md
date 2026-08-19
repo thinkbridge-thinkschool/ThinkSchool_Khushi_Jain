@@ -156,12 +156,14 @@ Paths in this section are relative to `sql/`.
 | Task | Where |
 |---|---|
 | The three read anomalies, and the level that prevents each | `day9-isolation-levels/` — `session_a.sql`, `session_b.sql`, `README.md` |
-| Captured result sets | `day9-isolation-levels/results/` |
+| A deadlock, its graph, and consistent lock ordering | `day9-deadlock/` — `session_a.sql`, `session_b.sql`, `README.md` |
+| Captured result sets | `results/` under both folders above |
 
-An uncommitted write is only visible to a second connection while the first one
-is still open, so this is the one piece that needs two sessions at once.
-`run-lab.ps1` starts both and waits on them together, and they take turns through
-a signal table rather than through timing.
+Both pieces need two connections open at once — an uncommitted write is only
+visible to a second session while the first is still open, and a deadlock needs
+two transactions waiting on each other. `run-lab.ps1` starts each pair together
+and waits on them, and they take turns through a signal table rather than through
+timing.
 
 ## Tests
 

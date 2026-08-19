@@ -1,0 +1,22 @@
+﻿Changed database context to 'QuotesLab'.
+=== 1. The deadlock: this session takes row 1, then row 2 ===
+--- Holding row 1 ---
+--- Now asking for row 2, which session B holds ---
+--- This session survived: session B was chosen as the victim ---
+=== The deadlock graph, from the always-on system_health session ===
+<deadlock><victim-list><victimProcess id="processe0042aca8"/></victim-list><process-list><process id="processe0042aca8" taskpriority="5" logused="356" waitresource="KEY: 5:72057594047627264 (8194443284a0)" waittime="991" ownerId="108569" transactionname="user_transaction" lasttranstarted="2026-08-19T06:06:33.647" XDES="0xe15b00470" lockMode="X" schedulerid="7" kpid="856" status="suspended" spid="61" sbid="0" ecid="0" priority="-5" trancount="2" lastbatchstarted="2026-08-19T06:06:33.647" lastbatchcompleted="2026-08-19T06:06:33.643" lastattention="1900-01-01T00:00:00.643" clientapp="SQLCMD" hostname="0a9b50fcd5e5" hostpid="18332" loginname="sa" isolationlevel="read committed (2)" xactid="108569" currentdb="5" currentdbname="QuotesLab" lockTimeout="4294967295" clientoption1="673185824" client
+option2="128056"/><process id="processe0041aca8" taskpriority="0" logused="356" waitresource="KEY: 5:72057594047627264 (61a06abd401c)" waittime="960" ownerId="108533" transactionname="user_transaction" lasttranstarted="2026-08-19T06:06:31.663" XDES="0xe0db54470" lockMode="X" schedulerid="5" kpid="780" status="suspended" spid="52" sbid="0" ecid="0" priority="0" trancount="2" lastbatchstarted="2026-08-19T06:06:31.630" lastbatchcompleted="2026-08-19T06:06:31.627" lastattention="1900-01-01T00:00:00.627" clientapp="SQLCMD" hostname="0a9b50fcd5e5" hostpid="18321" loginname="sa" isolationlevel="read committed (2)" xactid="108533" currentdb="5" currentdbname="QuotesLab" lockTimeout="4294967295" clientoption1="673185824" clientoption2="128056"/></process-list><resource-list><keylock hobtid="7205759
+4047627264" dbid="5" objectname="QuotesLab.txn.QuoteStat" indexname="PK_QuoteStat" id="locke16ec4400" mode="X" associatedObjectId="72057594047627264"><owner-list><owner id="processe0041aca8" mode="X"/></owner-list><waiter-list><waiter id="processe0042aca8" mode="X" requestType="wait"/></waiter-list></keylock><keylock hobtid="72057594047627264" dbid="5" objectname="QuotesLab.txn.QuoteStat" indexname="PK_QuoteStat" id="locke1877fe80" mode="X" associatedObjectId="72057594047627264"><owner-list><owner id="processe0042aca8" mode="X"/></owner-list><waiter-list><waiter id="processe0041aca8" mode="X" requestType="wait"/></waiter-list></keylock></resource-list></deadlock>
+ 
+=== 2. The fix: both sessions take row 1 first, then row 2 ===
+--- Holding row 1 ---
+--- Session B is queued behind row 1, holding nothing this session needs ---
+BlockedSessions|WaitTypes
+---------------|---------
+1|LCK_M_X
+--- Committed, no deadlock ---
+--- Both rows after both transactions committed ---
+QuoteId|LikeCount
+-------|---------
+1|103
+2|1002

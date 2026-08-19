@@ -101,6 +101,11 @@ submitted pieces.
 through `HASHBYTES`, with no `RAND()` and no `NEWID()`, so the row set is
 identical on every machine and page counts are comparable between runs.
 
+Day 9's deadlock graph is the one exception: it carries timestamps, session ids
+and lock ids, so `day9-deadlock/results/session_a.txt` differs between runs. What
+it proves — the cycle in `<resource-list>` and which session was the victim — is
+the same every time.
+
 Two runs a month apart produce byte-identical result files, which is what makes
 the committed output in `results/` evidence rather than a snapshot. The one
 figure deliberately left out of every captured file is elapsed time, which is
@@ -133,6 +138,7 @@ LocalDB instance is left alone.
 | `day8-indexes/` | Day 8, piece 1 — clustered vs non-clustered, measured over 100,000 rows |
 | `day8-covering-indexes/` | Day 8, piece 2 — covering indexes, `INCLUDE`, and killing a key lookup |
 | `day9-isolation-levels/` | Day 9, piece 1 — the three read anomalies, reproduced and then prevented |
+| `day9-deadlock/` | Day 9, piece 2 — a two-resource deadlock, its graph, and consistent lock ordering |
 | `*/results/` | Captured output from the last run. Committed, because it is the exercises' evidence |
 | `docker-compose.yml` | The SQL Server container |
 | `run-lab.ps1` | Start, apply, run, capture |

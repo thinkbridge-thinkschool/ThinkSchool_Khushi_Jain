@@ -9,8 +9,10 @@
     database and the seed uses fixed timestamps and no GETDATE(), so two runs on
     two machines produce identical files. Day 8's 100,000-row table is generated
     arithmetically from row numbers for the same reason. Day 9 needs two
-    connections open at once, so its two scripts run concurrently and coordinate
-    through a signal table rather than through timing.
+    connections open at once, so each of its pieces runs a pair of scripts
+    concurrently, coordinating through a signal table rather than through timing.
+    The captured deadlock graph is the one output that is not reproducible, since
+    it carries timestamps and session ids.
 
     The sa password is read from $env:MSSQL_SA_PASSWORD and is never passed as a
     command-line argument. sqlcmd picks it up from SQLCMDPASSWORD inside the
@@ -61,6 +63,7 @@ $setResults       = Join-Path $root 'day7-set-operations\results'
 $indexResults     = Join-Path $root 'day8-indexes\results'
 $coverResults     = Join-Path $root 'day8-covering-indexes\results'
 $isolationResults = Join-Path $root 'day9-isolation-levels\results'
+$deadlockResults  = Join-Path $root 'day9-deadlock\results'
 
 function Invoke-Native {
     # docker writes progress and diagnostics to stderr as a matter of course.
@@ -152,7 +155,7 @@ while ($true) {
 }
 Write-Host 'SQL Server is healthy.'
 
-foreach ($dir in @($joinsResults, $windowResults, $setResults, $indexResults, $coverResults, $isolationResults)) {
+foreach ($dir in @($joinsResults, $windowResults, $setResults, $indexResults, $coverResults, $isolationResults, $deadlockResults)) {
     if (-not (Test-Path $dir)) {
         New-Item -ItemType Directory -Path $dir | Out-Null
     }
@@ -224,47 +227,59 @@ Invoke-SqlScript -ContainerPath '/sql/day7-set-operations/08_set_operations.sql'
 Invoke-SqlScript -ContainerPath '/sql/day8-indexes/index_lab.sql'                   -ResultDirectory $indexResults -ResultFileName 'index_lab.txt'
 Invoke-SqlScript -ContainerPath '/sql/day8-covering-indexes/covering_index_lab.sql' -ResultDirectory $coverResults -ResultFileName 'covering_index_lab.txt'
 
-# Day 9 is the one piece that cannot be a single sqlcmd run: an uncommitted write
-# is only visible to a second connection while the first one is still open. Both
-# sqlcmd processes are therefore started inside the container and waited on
-# together, each writing to its own file so the two transcripts stay readable.
-# Session A owns the lab objects, so B is started a moment later; B also polls
-# for them, which is what actually makes the ordering safe.
-Write-Host ''
-Write-Host 'Running the Day-9 two-session lab -> session_a.txt, session_b.txt'
+# Both Day-9 pieces need two connections open at the same time, which one sqlcmd
+# run cannot give them: an uncommitted write is only visible to a second session
+# while the first is still open, and a deadlock needs two transactions waiting on
+# each other. Session A owns the shared objects, so B starts a moment later; B
+# also polls for them, which is what actually makes the ordering safe.
+function Invoke-TwoSessionLab {
+    param(
+        [Parameter(Mandatory)] [string] $ContainerFolder,
+        [Parameter(Mandatory)] [string] $ResultDirectory
+    )
 
-# One line, because PowerShell 5.1 does not pass a multi-line string to a native
-# command intact. Session B runs in the foreground and A in the background, so
-# the single `wait` is enough and no process ids have to survive the quoting.
-$sessionA = "$sqlcmdInvocation -i /sql/day9-isolation-levels/session_a.sql > /tmp/session_a.txt 2>&1"
-$sessionB = "$sqlcmdInvocation -i /sql/day9-isolation-levels/session_b.sql > /tmp/session_b.txt 2>&1"
-
-Invoke-InContainer -ShellCommand "$sessionA & sleep 2; $sessionB; wait" | Write-Host
-
-$day9Failures = @()
-
-foreach ($session in @('session_a', 'session_b')) {
-    $outputPath = Join-Path $isolationResults "$session.txt"
-    $output     = Invoke-InContainer -ShellCommand "cat /tmp/$session.txt"
-
-    $output | Out-File -FilePath $outputPath -Encoding utf8
     Write-Host ''
-    Write-Host "--- $session ---"
-    $output | Write-Host
+    Write-Host "Running $ContainerFolder -> session_a.txt, session_b.txt"
 
-    # sqlcmd's exit code is spent on the backgrounded half, so the captured
-    # transcript is what gets checked. An empty file means sqlcmd never ran.
-    if ([string]::IsNullOrWhiteSpace($output -join '')) {
-        $day9Failures += "$session produced no output"
+    # One line, because PowerShell 5.1 does not pass a multi-line string to a
+    # native command intact. Session B runs in the foreground and A in the
+    # background, so the single `wait` is enough and no process ids have to
+    # survive the quoting.
+    $a = "$sqlcmdInvocation -i $ContainerFolder/session_a.sql > /tmp/session_a.txt 2>&1"
+    $b = "$sqlcmdInvocation -i $ContainerFolder/session_b.sql > /tmp/session_b.txt 2>&1"
+
+    Invoke-InContainer -ShellCommand "$a & sleep 2; $b; wait" | Write-Host
+
+    $failures = @()
+
+    foreach ($session in @('session_a', 'session_b')) {
+        $outputPath = Join-Path $ResultDirectory "$session.txt"
+        $output     = Invoke-InContainer -ShellCommand "cat /tmp/$session.txt"
+
+        $output | Out-File -FilePath $outputPath -Encoding utf8
+        Write-Host ''
+        Write-Host "--- $session ---"
+        $output | Write-Host
+
+        # sqlcmd's exit code is spent on the backgrounded half, so the captured
+        # transcript is what gets checked. An empty file means sqlcmd never ran.
+        if ([string]::IsNullOrWhiteSpace($output -join '')) {
+            $failures += "$session produced no output"
+        }
+        elseif ($output -match 'Msg \d+, Level \d+') {
+            $failures += "$session reported a SQL error"
+        }
     }
-    elseif ($output -match 'Msg \d+, Level \d+') {
-        $day9Failures += "$session reported a SQL error"
+
+    if ($failures.Count -gt 0) {
+        throw "$ContainerFolder failed: $($failures -join '; '). Output saved to $ResultDirectory."
     }
 }
 
-if ($day9Failures.Count -gt 0) {
-    throw "The Day-9 two-session lab failed: $($day9Failures -join '; '). Output saved to $isolationResults."
-}
+# The deadlock piece reuses the signal table and the QuoteStat rows the isolation
+# piece builds, so it runs second.
+Invoke-TwoSessionLab -ContainerFolder '/sql/day9-isolation-levels' -ResultDirectory $isolationResults
+Invoke-TwoSessionLab -ContainerFolder '/sql/day9-deadlock'         -ResultDirectory $deadlockResults
 
 Write-Host ''
 Write-Host "Done. Result sets written to:"
@@ -274,4 +289,5 @@ Write-Host "  $setResults"
 Write-Host "  $indexResults"
 Write-Host "  $coverResults"
 Write-Host "  $isolationResults"
+Write-Host "  $deadlockResults"
 Write-Host 'Remove the container with: ./run-lab.ps1 -Stop'
