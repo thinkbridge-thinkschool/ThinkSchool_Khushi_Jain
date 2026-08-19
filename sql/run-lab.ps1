@@ -215,20 +215,10 @@ Invoke-SqlScript -ContainerPath '/sql/day7-joins-and-ctes/06_plans.sql'         
 Invoke-SqlScript -ContainerPath '/sql/day7-window-functions/07_window_functions.sql'   -ResultDirectory $windowResults -ResultFileName '07_window_functions.txt'
 Invoke-SqlScript -ContainerPath '/sql/day7-set-operations/08_set_operations.sql'       -ResultDirectory $setResults    -ResultFileName '08_set_operations.txt'
 
-# Day 8 builds its own 100,000-row table and must run in this order: 09 creates
-# the heap, 10 measures it and then adds the three indexes, 11 needs those
-# indexes to exist, and 12 works on its own tables. Together they add a minute
-# or two to the run -- most of it 10's deliberately terrible forced-seek query.
-Invoke-SqlScript -ContainerPath '/sql/day8-indexes/09_build_dataset.sql' -ResultDirectory $indexResults -ResultFileName '09_build_dataset.txt'
-Invoke-SqlScript -ContainerPath '/sql/day8-indexes/10_index_lab.sql'     -ResultDirectory $indexResults -ResultFileName '10_index_lab.txt'
-Invoke-SqlScript -ContainerPath '/sql/day8-indexes/11_actual_plans.sql'  -ResultDirectory $indexResults -ResultFileName '11_actual_plans.txt'
-Invoke-SqlScript -ContainerPath '/sql/day8-indexes/12_write_cost.sql'    -ResultDirectory $indexResults -ResultFileName '12_write_cost.txt'
-
-# Day 8 piece 2 reads the table and the indexes piece 1 built, so it has to run
-# after 10. 14 drops everything 13 created, leaving perf.QuoteView in the
-# three-index state piece 1 documented and 11 captured its plans against.
-Invoke-SqlScript -ContainerPath '/sql/day8-covering-indexes/13_covering_index_lab.sql' -ResultDirectory $coverResults -ResultFileName '13_covering_index_lab.txt'
-Invoke-SqlScript -ContainerPath '/sql/day8-covering-indexes/14_include_tradeoffs.sql'  -ResultDirectory $coverResults -ResultFileName '14_include_tradeoffs.txt'
+# Day 8 builds its own 100,000-row table, which adds a minute to the run. Piece 2
+# reads the table piece 1 leaves behind, so it has to run second.
+Invoke-SqlScript -ContainerPath '/sql/day8-indexes/index_lab.sql'                   -ResultDirectory $indexResults -ResultFileName 'index_lab.txt'
+Invoke-SqlScript -ContainerPath '/sql/day8-covering-indexes/covering_index_lab.sql' -ResultDirectory $coverResults -ResultFileName 'covering_index_lab.txt'
 
 Write-Host ''
 Write-Host "Done. Result sets written to:"

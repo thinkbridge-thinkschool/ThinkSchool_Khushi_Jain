@@ -1,0 +1,90 @@
+﻿Changed database context to 'QuotesLab'.
+=== The non-covering index ===
+--- Rows the lookup plan has to fetch one at a time ---
+MatchedRows
+-----------
+219
+=== BEFORE - expect LOOKUP, with Executes = the matched rows ===
+DeviceType|CountryCode|Views|AvgDwell
+----------|-----------|-----|--------
+desktop|IN|40|129.10
+mobile|IN|28|153.82
+tablet|IN|26|150.62
+mobile|DE|20|151.25
+tablet|US|19|123.47
+tablet|GB|16|203.88
+mobile|US|14|143.29
+desktop|DE|13|125.77
+desktop|GB|12|146.58
+tablet|DE|12|198.58
+desktop|US|10|140.30
+mobile|GB|9|145.67
+Table 'Worktable'. Scan count 0, logical reads 0, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'QuoteView'. Scan count 5, logical reads 694, physical reads 0, page server reads 0, read-ahead reads 4, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Rows|Executes|StmtText|StmtId|NodeId|Parent|PhysicalOp|LogicalOp|Argument|DefinedValues|EstimateRows|EstimateIO|EstimateCPU|AvgRowSize|TotalSubtreeCost|OutputList|Warnings|Type|Parallel|EstimateExecutions
+----|--------|--------|------|------|------|----------|---------|--------|-------------|------------|----------|-----------|----------|----------------|----------|--------|----|--------|------------------
+12|1|SELECT
+    DeviceType,
+    CountryCode,
+    Views    = COUNT(*),
+    AvgDwell = CONVERT(decimal(8,2), AVG(DwellSeconds * 1.0))
+FROM perf.QuoteView
+WHERE UserId IN (137, 842, 1699, 2001, 2444)
+GROUP BY DeviceType, CountryCode
+ORDER BY Views DESC, DeviceType, CountryCode
+OPTION (MAXDOP 1, RECOMPILE)|1|1|0|NULL|NULL|NULL|NULL|12.155598|NULL|NULL|NULL|0.66660631|NULL|NULL|SELECT|0|NULL
+12|1|  |--Sort(ORDER BY:([Expr1002] DESC, [QuotesLab].[perf].[QuoteView].[DeviceType] ASC, [QuotesLab].[perf].[QuoteView].[CountryCode] ASC))|1|2|1|Sort|Sort|ORDER BY:([Expr1002] DESC, [QuotesLab].[perf].[QuoteView].[DeviceType] ASC, [QuotesLab].[perf].[QuoteView].[CountryCode] ASC)|NULL|12.155598|1.1261261E-2|1.6836113E-4|28|0.66660631|[QuotesLab].[perf].[QuoteView].[CountryCode], [QuotesLab].[perf].[QuoteView].[DeviceType], [Expr1002], [Expr1004]|NULL|PLAN_ROW|0|1.0
+0|0|       |--Compute Scalar(DEFINE:([Expr1004]=CONVERT(decimal(8,2),[Expr1003],0)))|1|3|2|Compute Scalar|Compute Scalar|DEFINE:([Expr1004]=CONVERT(decimal(8,2),[Expr1003],0))|[Expr1004]=CONVERT(decimal(8,2),[Expr1003],0)|12.155598|0.0|1.2155598E-6|28|0.65517664|[QuotesLab].[perf].[QuoteView].[CountryCode], [QuotesLab].[perf].[QuoteView].[DeviceType], [Expr1002], [Expr1004]|NULL|PLAN_ROW|0|1.0
+0|0|            |--Compute Scalar(DEFINE:([Expr1002]=CONVERT_IMPLICIT(int,[Expr1013],0), [Expr1003]=CASE WHEN [Expr1014]=(0) THEN NULL ELSE [Expr1015]/CONVERT_IMPLICIT(numeric(19,0),[Expr1014],0) END))|1|4|3|Compute Scalar|Compute Scalar|DEFINE:([Expr1002]=CONVERT_IMPLICIT(int,[Expr1013],0), [Expr1003]=CASE WHEN [Expr1014]=(0) THEN NULL ELSE [Expr1015]/CONVERT_IMPLICIT(numeric(19,0),[Expr1014],0) END)|[Expr1002]=CONVERT_IMPLICIT(int,[Expr1013],0), [Expr1003]=CASE WHEN [Expr1014]=(0) THEN NULL ELSE [Expr1015]/CONVERT_IMPLICIT(numeric(19,0),[Expr1014],0) END|12.155598|0.0|0.0|40|0.65517545|[QuotesLab].[perf].[QuoteView].[CountryCode], [QuotesLab].[perf].[QuoteView].[DeviceType], [Expr1002], [Expr1003]|NULL|PLAN_ROW|0|1.0
+12|1|                 |--Stream Aggregate(GROUP BY:([QuotesLab].[perf].[QuoteView].[CountryCode], [QuotesLab].[perf].[QuoteView].[DeviceType]) DEFINE:([Expr1013]=Count(*), [Expr1014]=COUNT_BIG([Expr1005]), [Expr1015]=SUM([Expr1005])))|1|5|4|Stream Aggregate|Aggregate|GROUP BY:([QuotesLab].[perf].[QuoteView].[CountryCode], [QuotesLab].[perf].[QuoteView].[DeviceType])|[Expr1013]=Count(*), [Expr1014]=COUNT_BIG([Expr1005]), [Expr1015]=SUM([Expr1005])|12.155598|0.0|1.2884261E-4|40|0.65517545|[QuotesLab].[perf].[QuoteView].[CountryCode], [QuotesLab].[perf].[QuoteView].[DeviceType], [Expr1013], [Expr1014], [Expr1015]|NULL|PLAN_ROW|0|1.0
+219|1|                      |--Sort(ORDER BY:([QuotesLab].[perf].[QuoteView].[CountryCode] ASC, [QuotesLab].[perf].[QuoteView].[DeviceType] ASC))|1|6|5|Sort|Sort|ORDER BY:([QuotesLab].[perf].[QuoteView].[CountryCode] ASC, [QuotesLab].[perf].[QuoteView].[DeviceType] ASC)|NULL|204.60802|1.1261261E-2|2.5503484E-3|28|0.65504658|[QuotesLab].[perf].[QuoteView].[CountryCode], [QuotesLab].[perf].[QuoteView].[DeviceType], [Expr1005]|NULL|PLAN_ROW|0|1.0
+0|0|                           |--Compute Scalar(DEFINE:([Expr1005]=CONVERT_IMPLICIT(numeric(10,0),[QuotesLab].[perf].[QuoteView].[DwellSeconds],0)*(1.0)))|1|7|6|Compute Scalar|Compute Scalar|DEFINE:([Expr1005]=CONVERT_IMPLICIT(numeric(10,0),[QuotesLab].[perf].[QuoteView].[DwellSeconds],0)*(1.0))|[Expr1005]=CONVERT_IMPLICIT(numeric(10,0),[QuotesLab].[perf].[QuoteView].[DwellSeconds],0)*(1.0)|204.60802|0.0|2.04608E-5|28|0.64123499|[QuotesLab].[perf].[QuoteView].[CountryCode], [QuotesLab].[perf].[QuoteView].[DeviceType], [Expr1005]|NULL|PLAN_ROW|0|1.0
+219|1|                                |--Nested Loops(Inner Join, OUTER REFERENCES:([QuotesLab].[perf].[QuoteView].[ViewId], [QuotesLab].[perf].[QuoteView].[ViewedAt], [Expr1012]) WITH UNORDERED PREFETCH)|1|8|7|Nested Loops|Inner Join|OUTER REFERENCES:([QuotesLab].[perf].[QuoteView].[ViewId], [QuotesLab].[perf].[QuoteView].[ViewedAt], [Expr1012]) WITH UNORDERED PREFETCH|NULL|204.60802|0.0|8.5526152E-4|23|0.64121455|[QuotesLab].[perf].[QuoteView].[CountryCode], [QuotesLab].[perf].[QuoteView].[DeviceType], [QuotesLab].[perf].[QuoteView].[DwellSeconds]|NULL|PLAN_ROW|0|1.0
+219|1|                                     |--Index Seek(OBJECT:([QuotesLab].[perf].[QuoteView].[IX_QuoteView_UserId_ViewedAt]), SEEK:([QuotesLab].[perf].[QuoteView].[UserId]=(137) OR [QuotesLab].[perf].[QuoteView].[UserId]=(842) OR [QuotesLab].[perf].[QuoteView].[UserId]=(1699) OR [QuotesLab].[perf].[QuoteView].[UserId]=(2001) OR [QuotesLab].[perf].[QuoteView].[UserId]=(2444)) ORDERED FORWARD)|1|10|8|Index Seek|Index Seek|OBJECT:([QuotesLab].[perf].[QuoteView].[IX_QuoteView_UserId_ViewedAt]), SEEK:([QuotesLab].[perf].[QuoteView].[UserId]=(137) OR [QuotesLab].[perf].[QuoteView].[UserId]=(842) OR [QuotesLab].[perf].[QuoteView].[UserId]=(1699) OR [QuotesLab].[perf].[QuoteView].[UserId]=(2001) OR [QuotesLab].[perf].[QuoteView].[UserId]=(2444)) ORDERED FORWARD|[QuotesLab].[perf].[QuoteView].[ViewId], [QuotesLab].[perf].[QuoteView].[ViewedAt]|204.60802|0.003125|3.8206883E-4|22|3.5070688E-3|[QuotesLab].[perf].[QuoteView].[ViewId], [QuotesLab].[perf].[QuoteView].[ViewedAt]|NULL|PLAN_ROW|0|1.0
+219|219|                                     |--Clustered Index Seek(OBJECT:([QuotesLab].[perf].[QuoteView].[CIX_QuoteView_ViewedAt]), SEEK:([QuotesLab].[perf].[QuoteView].[ViewedAt]=[QuotesLab].[perf].[QuoteView].[ViewedAt] AND [QuotesLab].[perf].[QuoteView].[ViewId]=[QuotesLab].[perf].[QuoteView].[ViewId]) LOOKUP ORDERED FORWARD)|1|12|8|Clustered Index Seek|Clustered Index Seek|OBJECT:([QuotesLab].[perf].[QuoteView].[CIX_QuoteView_ViewedAt]), SEEK:([QuotesLab].[perf].[QuoteView].[ViewedAt]=[QuotesLab].[perf].[QuoteView].[ViewedAt] AND [QuotesLab].[perf].[QuoteView].[ViewId]=[QuotesLab].[perf].[QuoteView].[ViewId]) LOOKUP ORDERED FORWARD|[QuotesLab].[perf].[QuoteView].[CountryCode], [QuotesLab].[perf].[QuoteView].[DeviceType], [QuotesLab].[perf].[QuoteView].[DwellSeconds]|1.0|0.003125|0.0001581|22|0.6368522|[QuotesLab].[perf].[QuoteView].[CountryCode], [QuotesLab].[perf].[QuoteView].[DeviceType], [QuotesLab].[perf].[QuoteView].[DwellSeconds]|NULL|PLAN_ROW|0|204.60802
+=== The covering index ===
+=== AFTER - expect no Nested Loops and no LOOKUP, just an Index Seek ===
+DeviceType|CountryCode|Views|AvgDwell
+----------|-----------|-----|--------
+desktop|IN|40|129.10
+mobile|IN|28|153.82
+tablet|IN|26|150.62
+mobile|DE|20|151.25
+tablet|US|19|123.47
+tablet|GB|16|203.88
+mobile|US|14|143.29
+desktop|DE|13|125.77
+desktop|GB|12|146.58
+tablet|DE|12|198.58
+desktop|US|10|140.30
+mobile|GB|9|145.67
+Table 'Worktable'. Scan count 0, logical reads 0, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Table 'QuoteView'. Scan count 5, logical reads 16, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.
+Rows|Executes|StmtText|StmtId|NodeId|Parent|PhysicalOp|LogicalOp|Argument|DefinedValues|EstimateRows|EstimateIO|EstimateCPU|AvgRowSize|TotalSubtreeCost|OutputList|Warnings|Type|Parallel|EstimateExecutions
+----|--------|--------|------|------|------|----------|---------|--------|-------------|------------|----------|-----------|----------|----------------|----------|--------|----|--------|------------------
+12|1|SELECT
+    DeviceType,
+    CountryCode,
+    Views    = COUNT(*),
+    AvgDwell = CONVERT(decimal(8,2), AVG(DwellSeconds * 1.0))
+FROM perf.QuoteView
+WHERE UserId IN (137, 842, 1699, 2001, 2444)
+GROUP BY DeviceType, CountryCode
+ORDER BY Views DESC, DeviceType, CountryCode
+OPTION (MAXDOP 1, RECOMPILE)|1|1|0|NULL|NULL|NULL|NULL|12.155598|NULL|NULL|NULL|2.9639561E-2|NULL|NULL|SELECT|0|NULL
+12|1|  |--Sort(ORDER BY:([Expr1002] DESC, [QuotesLab].[perf].[QuoteView].[DeviceType] ASC, [QuotesLab].[perf].[QuoteView].[CountryCode] ASC))|1|2|1|Sort|Sort|ORDER BY:([Expr1002] DESC, [QuotesLab].[perf].[QuoteView].[DeviceType] ASC, [QuotesLab].[perf].[QuoteView].[CountryCode] ASC)|NULL|12.155598|1.1261261E-2|1.6836113E-4|28|2.9639561E-2|[QuotesLab].[perf].[QuoteView].[CountryCode], [QuotesLab].[perf].[QuoteView].[DeviceType], [Expr1002], [Expr1004]|NULL|PLAN_ROW|0|1.0
+0|0|       |--Compute Scalar(DEFINE:([Expr1004]=CONVERT(decimal(8,2),[Expr1003],0)))|1|3|2|Compute Scalar|Compute Scalar|DEFINE:([Expr1004]=CONVERT(decimal(8,2),[Expr1003],0))|[Expr1004]=CONVERT(decimal(8,2),[Expr1003],0)|12.155598|0.0|1.2155598E-6|28|1.8209938E-2|[QuotesLab].[perf].[QuoteView].[CountryCode], [QuotesLab].[perf].[QuoteView].[DeviceType], [Expr1002], [Expr1004]|NULL|PLAN_ROW|0|1.0
+0|0|            |--Compute Scalar(DEFINE:([Expr1002]=CONVERT_IMPLICIT(int,[Expr1012],0), [Expr1003]=CASE WHEN [Expr1013]=(0) THEN NULL ELSE [Expr1014]/CONVERT_IMPLICIT(numeric(19,0),[Expr1013],0) END))|1|4|3|Compute Scalar|Compute Scalar|DEFINE:([Expr1002]=CONVERT_IMPLICIT(int,[Expr1012],0), [Expr1003]=CASE WHEN [Expr1013]=(0) THEN NULL ELSE [Expr1014]/CONVERT_IMPLICIT(numeric(19,0),[Expr1013],0) END)|[Expr1002]=CONVERT_IMPLICIT(int,[Expr1012],0), [Expr1003]=CASE WHEN [Expr1013]=(0) THEN NULL ELSE [Expr1014]/CONVERT_IMPLICIT(numeric(19,0),[Expr1013],0) END|12.155598|0.0|0.0|40|1.8208724E-2|[QuotesLab].[perf].[QuoteView].[CountryCode], [QuotesLab].[perf].[QuoteView].[DeviceType], [Expr1002], [Expr1003]|NULL|PLAN_ROW|0|1.0
+12|1|                 |--Stream Aggregate(GROUP BY:([QuotesLab].[perf].[QuoteView].[CountryCode], [QuotesLab].[perf].[QuoteView].[DeviceType]) DEFINE:([Expr1012]=Count(*), [Expr1013]=COUNT_BIG([Expr1005]), [Expr1014]=SUM([Expr1005])))|1|5|4|Stream Aggregate|Aggregate|GROUP BY:([QuotesLab].[perf].[QuoteView].[CountryCode], [QuotesLab].[perf].[QuoteView].[DeviceType])|[Expr1012]=Count(*), [Expr1013]=COUNT_BIG([Expr1005]), [Expr1014]=SUM([Expr1005])|12.155598|0.0|1.2884261E-4|40|1.8208724E-2|[QuotesLab].[perf].[QuoteView].[CountryCode], [QuotesLab].[perf].[QuoteView].[DeviceType], [Expr1012], [Expr1013], [Expr1014]|NULL|PLAN_ROW|0|1.0
+219|1|                      |--Sort(ORDER BY:([QuotesLab].[perf].[QuoteView].[CountryCode] ASC, [QuotesLab].[perf].[QuoteView].[DeviceType] ASC))|1|6|5|Sort|Sort|ORDER BY:([QuotesLab].[perf].[QuoteView].[CountryCode] ASC, [QuotesLab].[perf].[QuoteView].[DeviceType] ASC)|NULL|204.60802|1.1261261E-2|2.5503484E-3|28|1.8079881E-2|[QuotesLab].[perf].[QuoteView].[CountryCode], [QuotesLab].[perf].[QuoteView].[DeviceType], [Expr1005]|NULL|PLAN_ROW|0|1.0
+0|0|                           |--Compute Scalar(DEFINE:([Expr1005]=CONVERT_IMPLICIT(numeric(10,0),[QuotesLab].[perf].[QuoteView].[DwellSeconds],0)*(1.0)))|1|7|6|Compute Scalar|Compute Scalar|DEFINE:([Expr1005]=CONVERT_IMPLICIT(numeric(10,0),[QuotesLab].[perf].[QuoteView].[DwellSeconds],0)*(1.0))|[Expr1005]=CONVERT_IMPLICIT(numeric(10,0),[QuotesLab].[perf].[QuoteView].[DwellSeconds],0)*(1.0)|204.60802|0.0|2.04608E-5|28|4.2682705E-3|[QuotesLab].[perf].[QuoteView].[CountryCode], [QuotesLab].[perf].[QuoteView].[DeviceType], [Expr1005]|NULL|PLAN_ROW|0|1.0
+219|1|                                |--Index Seek(OBJECT:([QuotesLab].[perf].[QuoteView].[IX_QuoteView_UserId_ViewedAt_Covering]), SEEK:([QuotesLab].[perf].[QuoteView].[UserId]=(137) OR [QuotesLab].[perf].[QuoteView].[UserId]=(842) OR [QuotesLab].[perf].[QuoteView].[UserId]=(1699) OR [QuotesLab].[perf].[QuoteView].[UserId]=(2001) OR [QuotesLab].[perf].[QuoteView].[UserId]=(2444)) ORDERED FORWARD)|1|8|7|Index Seek|Index Seek|OBJECT:([QuotesLab].[perf].[QuoteView].[IX_QuoteView_UserId_ViewedAt_Covering]), SEEK:([QuotesLab].[perf].[QuoteView].[UserId]=(137) OR [QuotesLab].[perf].[QuoteView].[UserId]=(842) OR [QuotesLab].[perf].[QuoteView].[UserId]=(1699) OR [QuotesLab].[perf].[QuoteView].[UserId]=(2001) OR [QuotesLab].[perf].[QuoteView].[UserId]=(2444)) ORDERED FORWARD|[QuotesLab].[perf].[QuoteView].[CountryCode], [QuotesLab].[perf].[QuoteView].[DeviceType], [QuotesLab].[perf].[QuoteView].[DwellSeconds]|204.60802|3.8657407E-3|3.8206883E-4|23|4.2478098E-3|[QuotesLab].[perf].[QuoteView].[CountryCode], [QuotesLab].[perf].[QuoteView].[DeviceType], [QuotesLab].[perf].[QuoteView].[DwellSeconds]|NULL|PLAN_ROW|0|1.0
+=== What the three included columns cost ===
+IndexName|index_level|page_count|AvgRecordBytes
+---------|-----------|----------|--------------
+IX_QuoteView_UserId_ViewedAt|0|320|23.00
+IX_QuoteView_UserId_ViewedAt|1|3|26.00
+IX_QuoteView_UserId_ViewedAt|2|1|26.00
+IX_QuoteView_UserId_ViewedAt_Covering|0|517|39.33
+IX_QuoteView_UserId_ViewedAt_Covering|1|8|26.00
+IX_QuoteView_UserId_ViewedAt_Covering|2|1|26.00
