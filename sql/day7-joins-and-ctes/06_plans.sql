@@ -40,14 +40,6 @@ LEFT JOIN AuthorQuote AS aq
 ORDER BY QuoteCount DESC, a.FullName;
 GO
 
-
-
-   So "APPLY is cheaper at scale" is only half true, and the half that is true
-   is not the half that dominates. Making APPLY genuinely win would mean
-   sourcing the count from somewhere that is not a per-author scan: an indexed
-   view, a maintained counter column, or a single pre-aggregated pass whose
-   result is materialised before the join.
-   --------------------------------------------------------------------------- */
 WITH QuoteStats AS
 (
     SELECT
