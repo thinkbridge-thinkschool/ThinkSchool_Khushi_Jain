@@ -122,7 +122,7 @@ Paths in this section are relative to `sql/`.
 
 | Task | Where |
 |---|---|
-| Joins and CTEs at depth | `day7-joins-and-ctes/` — `03_joins.sql`, `04_author_quote_summary.sql`, `05_recursive_cte.sql`, `06_plans.sql`, `README.md` |
+| Joins and CTEs | `day7-joins-and-ctes/` — `joins_and_ctes.sql`, `README.md` |
 | Window functions | `day7-window-functions/` — `07_window_functions.sql`, `README.md` |
 | Set operations from a spec | `day7-set-operations/` — `08_set_operations.sql`, `README.md` |
 | Captured result sets | `results/` under each of the three folders above |

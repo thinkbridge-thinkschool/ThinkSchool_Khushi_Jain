@@ -214,10 +214,7 @@ if ($SchemaOnly) {
     return
 }
 
-Invoke-SqlScript -ContainerPath '/sql/day7-joins-and-ctes/03_joins.sql'                -ResultDirectory $joinsResults -ResultFileName '03_joins.txt'
-Invoke-SqlScript -ContainerPath '/sql/day7-joins-and-ctes/04_author_quote_summary.sql' -ResultDirectory $joinsResults -ResultFileName '04_author_quote_summary.txt'
-Invoke-SqlScript -ContainerPath '/sql/day7-joins-and-ctes/05_recursive_cte.sql'        -ResultDirectory $joinsResults -ResultFileName '05_recursive_cte.txt'
-Invoke-SqlScript -ContainerPath '/sql/day7-joins-and-ctes/06_plans.sql'                -ResultDirectory $joinsResults -ResultFileName '06_plans.txt'
+Invoke-SqlScript -ContainerPath '/sql/day7-joins-and-ctes/joins_and_ctes.sql'          -ResultDirectory $joinsResults -ResultFileName 'joins_and_ctes.txt'
 
 Invoke-SqlScript -ContainerPath '/sql/day7-window-functions/07_window_functions.sql'   -ResultDirectory $windowResults -ResultFileName '07_window_functions.txt'
 Invoke-SqlScript -ContainerPath '/sql/day7-set-operations/08_set_operations.sql'       -ResultDirectory $setResults    -ResultFileName '08_set_operations.txt'
