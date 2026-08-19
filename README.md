@@ -149,6 +149,20 @@ invalidated the three Day-7 pieces already submitted against that data. The rows
 are derived arithmetically from row numbers, so the page counts and logical-read
 figures are reproducible.
 
+### Day 9 — transactions and isolation levels
+
+Paths in this section are relative to `sql/`.
+
+| Task | Where |
+|---|---|
+| The three read anomalies, and the level that prevents each | `day9-isolation-levels/` — `session_a.sql`, `session_b.sql`, `README.md` |
+| Captured result sets | `day9-isolation-levels/results/` |
+
+An uncommitted write is only visible to a second connection while the first one
+is still open, so this is the one piece that needs two sessions at once.
+`run-lab.ps1` starts both and waits on them together, and they take turns through
+a signal table rather than through timing.
+
 ## Tests
 
 ```bash

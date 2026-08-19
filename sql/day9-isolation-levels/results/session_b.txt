@@ -1,0 +1,26 @@
+﻿Changed database context to 'QuotesLab'.
+=== 1. Dirty read at READ UNCOMMITTED ===
+--- Row 1 set to 111 and left uncommitted ---
+--- Rolled back ---
+ 
+=== 2. READ COMMITTED prevents the dirty read ===
+--- Row 1 set to 112 and left uncommitted ---
+--- Session A is waiting on the exclusive lock this transaction holds ---
+BlockedSessions|WaitTypes
+---------------|---------
+1|LCK_M_S
+--- Rolled back, so session A reads 100 rather than 112 ---
+ 
+=== 3. Non-repeatable read at READ COMMITTED ===
+--- Row 2 set to 222 and committed while session A's transaction is open ---
+ 
+=== 4. REPEATABLE READ prevents the non-repeatable read ===
+--- This update blocks until session A commits ---
+--- Row 2 set to 999 once the lock was released ---
+ 
+=== 5. Phantom read at REPEATABLE READ ===
+--- QuoteId 11 inserted into the range session A is reading ---
+ 
+=== 6. SERIALIZABLE prevents the phantom read ===
+--- This insert blocks until session A commits ---
+--- QuoteId 12 inserted once the range lock was released ---

@@ -66,6 +66,8 @@ that produced it. `-SchemaOnly` rebuilds the database without running the
 queries. `-Stop` removes the container and its data with it.
 
 Day 8 generates its own 100,000-row table and adds a minute or two to the run.
+Day 9 is the one piece that runs two sqlcmd sessions concurrently, because an
+uncommitted write is only visible to a second connection while the first is open.
 
 Nothing persists between runs, on purpose. SQL Server reads
 `MSSQL_SA_PASSWORD` only when it initialises a fresh data directory and ignores
@@ -130,6 +132,7 @@ LocalDB instance is left alone.
 | `day7-set-operations/` | Day 7, piece 3 — `UNION`/`INTERSECT`/`EXCEPT`, and translating a vague spec |
 | `day8-indexes/` | Day 8, piece 1 — clustered vs non-clustered, measured over 100,000 rows |
 | `day8-covering-indexes/` | Day 8, piece 2 — covering indexes, `INCLUDE`, and killing a key lookup |
+| `day9-isolation-levels/` | Day 9, piece 1 — the three read anomalies, reproduced and then prevented |
 | `*/results/` | Captured output from the last run. Committed, because it is the exercises' evidence |
 | `docker-compose.yml` | The SQL Server container |
 | `run-lab.ps1` | Start, apply, run, capture |

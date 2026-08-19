@@ -1,13 +1,16 @@
 <#
 .SYNOPSIS
-    Builds QuotesLab in a local SQL Server container and runs the Day-7 and
-    Day-8 scripts, saving every result set under the matching exercise folder.
+    Builds QuotesLab in a local SQL Server container and runs the Day-7, Day-8
+    and Day-9 scripts, saving every result set under the matching exercise
+    folder.
 
 .DESCRIPTION
     One command, reproducible output. The schema script drops and recreates the
     database and the seed uses fixed timestamps and no GETDATE(), so two runs on
     two machines produce identical files. Day 8's 100,000-row table is generated
-    arithmetically from row numbers for the same reason.
+    arithmetically from row numbers for the same reason. Day 9 needs two
+    connections open at once, so its two scripts run concurrently and coordinate
+    through a signal table rather than through timing.
 
     The sa password is read from $env:MSSQL_SA_PASSWORD and is never passed as a
     command-line argument. sqlcmd picks it up from SQLCMDPASSWORD inside the
@@ -52,11 +55,12 @@ $container   = 'quoteslab-sql'
 # with the joins piece rather than in a directory of its own, because that is
 # where it was first captured and the folder has already been handed to a
 # mentor as a link.
-$joinsResults  = Join-Path $root 'day7-joins-and-ctes\results'
-$windowResults = Join-Path $root 'day7-window-functions\results'
-$setResults    = Join-Path $root 'day7-set-operations\results'
-$indexResults  = Join-Path $root 'day8-indexes\results'
-$coverResults  = Join-Path $root 'day8-covering-indexes\results'
+$joinsResults     = Join-Path $root 'day7-joins-and-ctes\results'
+$windowResults    = Join-Path $root 'day7-window-functions\results'
+$setResults       = Join-Path $root 'day7-set-operations\results'
+$indexResults     = Join-Path $root 'day8-indexes\results'
+$coverResults     = Join-Path $root 'day8-covering-indexes\results'
+$isolationResults = Join-Path $root 'day9-isolation-levels\results'
 
 function Invoke-Native {
     # docker writes progress and diagnostics to stderr as a matter of course.
@@ -148,7 +152,7 @@ while ($true) {
 }
 Write-Host 'SQL Server is healthy.'
 
-foreach ($dir in @($joinsResults, $windowResults, $setResults, $indexResults, $coverResults)) {
+foreach ($dir in @($joinsResults, $windowResults, $setResults, $indexResults, $coverResults, $isolationResults)) {
     if (-not (Test-Path $dir)) {
         New-Item -ItemType Directory -Path $dir | Out-Null
     }
@@ -169,6 +173,13 @@ if ([string]::IsNullOrWhiteSpace($sqlcmd)) {
 }
 $sqlcmd = $sqlcmd.Trim()
 
+# -b   stop on error, so a broken script fails the run instead of scrolling past
+# -I   QUOTED_IDENTIFIER on, which the filtered index needs to be usable
+# -W   trim column padding, so the captured files stay readable. sqlcmd rejects
+#      -y alongside it, which is fine: trimming makes the declared nvarchar
+#      width irrelevant to the output anyway
+$sqlcmdInvocation = "SQLCMDPASSWORD=`"`$MSSQL_SA_PASSWORD`" $sqlcmd -S localhost -U sa -C -b -I -l 60 -W -s '|'"
+
 function Invoke-SqlScript {
     param(
         [Parameter(Mandatory)] [string] $ContainerPath,
@@ -180,14 +191,7 @@ function Invoke-SqlScript {
     Write-Host ''
     Write-Host "Running $ContainerPath -> $ResultFileName"
 
-    # -b   stop on error, so a broken script fails the run instead of scrolling past
-    # -I   QUOTED_IDENTIFIER on, which the filtered index needs to be usable
-    # -W   trim column padding, so the captured files stay readable. sqlcmd
-    #      rejects -y alongside it, which is fine: trimming makes the declared
-    #      nvarchar width irrelevant to the output anyway
-    $command = "SQLCMDPASSWORD=`"`$MSSQL_SA_PASSWORD`" $sqlcmd -S localhost -U sa -C -b -I -l 60 -W -s '|' -i $ContainerPath"
-
-    $output = Invoke-InContainer -ShellCommand $command
+    $output = Invoke-InContainer -ShellCommand "$sqlcmdInvocation -i $ContainerPath"
     $exit   = $LASTEXITCODE
 
     $output | Out-File -FilePath $outputPath -Encoding utf8
@@ -220,6 +224,48 @@ Invoke-SqlScript -ContainerPath '/sql/day7-set-operations/08_set_operations.sql'
 Invoke-SqlScript -ContainerPath '/sql/day8-indexes/index_lab.sql'                   -ResultDirectory $indexResults -ResultFileName 'index_lab.txt'
 Invoke-SqlScript -ContainerPath '/sql/day8-covering-indexes/covering_index_lab.sql' -ResultDirectory $coverResults -ResultFileName 'covering_index_lab.txt'
 
+# Day 9 is the one piece that cannot be a single sqlcmd run: an uncommitted write
+# is only visible to a second connection while the first one is still open. Both
+# sqlcmd processes are therefore started inside the container and waited on
+# together, each writing to its own file so the two transcripts stay readable.
+# Session A owns the lab objects, so B is started a moment later; B also polls
+# for them, which is what actually makes the ordering safe.
+Write-Host ''
+Write-Host 'Running the Day-9 two-session lab -> session_a.txt, session_b.txt'
+
+# One line, because PowerShell 5.1 does not pass a multi-line string to a native
+# command intact. Session B runs in the foreground and A in the background, so
+# the single `wait` is enough and no process ids have to survive the quoting.
+$sessionA = "$sqlcmdInvocation -i /sql/day9-isolation-levels/session_a.sql > /tmp/session_a.txt 2>&1"
+$sessionB = "$sqlcmdInvocation -i /sql/day9-isolation-levels/session_b.sql > /tmp/session_b.txt 2>&1"
+
+Invoke-InContainer -ShellCommand "$sessionA & sleep 2; $sessionB; wait" | Write-Host
+
+$day9Failures = @()
+
+foreach ($session in @('session_a', 'session_b')) {
+    $outputPath = Join-Path $isolationResults "$session.txt"
+    $output     = Invoke-InContainer -ShellCommand "cat /tmp/$session.txt"
+
+    $output | Out-File -FilePath $outputPath -Encoding utf8
+    Write-Host ''
+    Write-Host "--- $session ---"
+    $output | Write-Host
+
+    # sqlcmd's exit code is spent on the backgrounded half, so the captured
+    # transcript is what gets checked. An empty file means sqlcmd never ran.
+    if ([string]::IsNullOrWhiteSpace($output -join '')) {
+        $day9Failures += "$session produced no output"
+    }
+    elseif ($output -match 'Msg \d+, Level \d+') {
+        $day9Failures += "$session reported a SQL error"
+    }
+}
+
+if ($day9Failures.Count -gt 0) {
+    throw "The Day-9 two-session lab failed: $($day9Failures -join '; '). Output saved to $isolationResults."
+}
+
 Write-Host ''
 Write-Host "Done. Result sets written to:"
 Write-Host "  $joinsResults"
@@ -227,4 +273,5 @@ Write-Host "  $windowResults"
 Write-Host "  $setResults"
 Write-Host "  $indexResults"
 Write-Host "  $coverResults"
+Write-Host "  $isolationResults"
 Write-Host 'Remove the container with: ./run-lab.ps1 -Stop'

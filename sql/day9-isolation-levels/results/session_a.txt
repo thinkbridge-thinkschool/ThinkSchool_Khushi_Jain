@@ -1,0 +1,77 @@
+﻿Changed database context to 'QuotesLab'.
+=== Snapshot options: both must be off, or these locks never happen ===
+ReadCommittedSnapshot|SnapshotIsolationState
+---------------------|----------------------
+0|OFF
+ 
+=== 1. Dirty read at READ UNCOMMITTED ===
+--- Row 1 while session B holds an uncommitted UPDATE ---
+QuoteId|LikeCount
+-------|---------
+1|111
+--- Row 1 after session B rolled back: the value above never existed ---
+QuoteId|LikeCount
+-------|---------
+1|100
+ 
+=== 2. READ COMMITTED prevents the dirty read ===
+--- This read blocks until session B rolls back, then returns 100 ---
+QuoteId|LikeCount
+-------|---------
+1|100
+ 
+=== 3. Non-repeatable read at READ COMMITTED ===
+--- First read of row 2 ---
+QuoteId|LikeCount
+-------|---------
+2|200
+--- Second read of row 2, same transaction ---
+QuoteId|LikeCount
+-------|---------
+2|222
+ 
+=== 4. REPEATABLE READ prevents the non-repeatable read ===
+--- First read of row 2 ---
+QuoteId|LikeCount
+-------|---------
+2|222
+--- Session B is waiting on the shared lock this transaction still holds ---
+BlockedSessions|WaitTypes
+---------------|---------
+1|LCK_M_X
+--- Second read of row 2, same transaction ---
+QuoteId|LikeCount
+-------|---------
+2|222
+--- Row 2 after the commit released the lock ---
+QuoteId|LikeCount
+-------|---------
+2|999
+ 
+=== 5. Phantom read at REPEATABLE READ ===
+--- First count of QuoteId 10 to 19 ---
+RowsInRange
+-----------
+1
+--- Second count of the same range, same transaction ---
+RowsInRange
+-----------
+2
+ 
+=== 6. SERIALIZABLE prevents the phantom read ===
+--- First count of QuoteId 10 to 19 ---
+RowsInRange
+-----------
+2
+--- Session B is waiting on the key-range lock this transaction holds ---
+BlockedSessions|WaitTypes
+---------------|---------
+1|LCK_M_RIn_NL
+--- Second count of the same range, same transaction ---
+RowsInRange
+-----------
+2
+--- The range after the commit released it ---
+RowsInRange
+-----------
+3
