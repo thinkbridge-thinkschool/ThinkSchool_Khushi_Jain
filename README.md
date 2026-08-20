@@ -126,12 +126,16 @@ Paths in this section are relative to `sql/`.
 | Window functions | `day7-window-functions/` — `07_window_functions.sql`, `README.md` |
 | Set operations from a spec | `day7-set-operations/` — `08_set_operations.sql`, `README.md` |
 | Captured result sets | `results/` under each of the three folders above |
-| The database they run against | `schema/01_schema.sql`, `schema/02_seed.sql`, `docker-compose.yml`, `run-lab.ps1` |
+| The SQL Server they run against | `docker-compose.yml` |
 
 `QuotesLab` is a separate SQL Server database, not the API's store. The shipped
 EF Core model keeps the author as a string column, carries no timestamp on
 `Quote`, and has nothing hierarchical in it, so the Day-7 question is not
-expressible against it. `sql/README.md` covers the reasoning and how to run it.
+expressible against it.
+
+There is no schema or seed script in the repository, so the Day 7–9 labs cannot be
+rebuilt from a clean clone. What they produced is captured under each piece's
+`results/`, including the schema and seed output in `day7-joins-and-ctes/results/`.
 
 ### Day 8 — indexes and execution plans
 
@@ -161,8 +165,8 @@ Paths in this section are relative to `sql/`.
 
 Both pieces need two connections open at once — an uncommitted write is only
 visible to a second session while the first is still open, and a deadlock needs
-two transactions waiting on each other. `run-lab.ps1` starts each pair together
-and waits on them, and they take turns through a signal table rather than through
+two transactions waiting on each other. Each pair is opened by hand in two
+connections, and they take turns through a signal table rather than through
 timing.
 
 ### Day 10 — EF Core change tracker
