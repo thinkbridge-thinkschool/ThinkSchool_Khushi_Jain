@@ -165,6 +165,12 @@ two transactions waiting on each other. `run-lab.ps1` starts each pair together
 and waits on them, and they take turns through a signal table rather than through
 timing.
 
+### Day 10 — EF Core change tracker
+
+| Task | Where |
+|---|---|
+| Change tracker, identity resolution, `AsNoTracking` on a 10,000-row read | `QuotesApi.Tests/ChangeTrackingTests.cs`, `QuotesApi.Tests/CHANGE_TRACKING.md` |
+
 ## Tests
 
 ```bash
