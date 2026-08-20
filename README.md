@@ -169,11 +169,12 @@ two transactions waiting on each other. Each pair is opened by hand in two
 connections, and they take turns through a signal table rather than through
 timing.
 
-### Day 10 — EF Core change tracker
+### Day 10 — EF Core performance
 
 | Task | Where |
 |---|---|
 | Change tracker, identity resolution, `AsNoTracking` on a 10,000-row read | `QuotesApi.Tests/ChangeTrackingTests.cs`, `QuotesApi.Tests/CHANGE_TRACKING.md` |
+| Query translation, DTO projection, a caught client evaluation | `QuotesApi.Tests/QueryTranslationTests.cs`, `QuotesApi.Tests/QUERY_TRANSLATION.md` |
 
 ## Tests
 

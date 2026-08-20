@@ -253,7 +253,16 @@ public static class InfrastructureExtensions
             ?? "Data Source=quotes.db";
 
         builder.Services.AddDbContext<QuotesDbContext>(options =>
-            options.UseSqlite(connectionString));
+        {
+            options.UseSqlite(connectionString);
+
+            // Serilog already logs EF's commands at Debug in Development. This adds
+            // the parameter values to them, which never belong in a deployed log.
+            if (builder.Environment.IsDevelopment())
+            {
+                options.EnableSensitiveDataLogging();
+            }
+        });
 
         builder.Services.AddScoped<IQuoteRepository, QuoteRepository>();
         builder.Services.AddScoped<ICollectionRepository, CollectionRepository>();
