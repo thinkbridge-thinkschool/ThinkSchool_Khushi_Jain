@@ -1,16 +1,13 @@
 # Day 7 — joins and CTEs
 
-## The exercise
-
 Return each author with their quote count and their most-recent quote, in one
-statement, using a CTE rather than a correlated subquery in the SELECT.
+statement, using a CTE instead of a correlated subquery. The query is in
+[`joins_and_ctes.sql`](joins_and_ctes.sql), the output in [`results/`](results).
 
-Database: `QuotesLab` on SQL Server 2022. See [sql/README.md](../README.md) for
-how to run it.
+Database: `QuotesLab` on SQL Server 2022, started with
+[`sql/docker-compose.yml`](../docker-compose.yml).
 
-## The answer
-
-[`joins_and_ctes.sql`](joins_and_ctes.sql)
+## The query
 
 ```sql
 WITH AuthorQuote AS
@@ -39,17 +36,25 @@ LEFT JOIN AuthorQuote AS aq
 ORDER BY QuoteCount DESC, a.FullName;
 ```
 
-One pass over `app.Quote`: `COUNT(*) OVER` attaches the author's total to every
+## How it works
+
+One pass over `app.Quote`. `COUNT(*) OVER` attaches the author's total to every
 one of their rows, `ROW_NUMBER()` marks the newest, and the outer query keeps
 row 1.
 
-`LEFT JOIN` keeps the three authors with no live quotes. `QuoteId DESC` breaks
-Ada Lovelace's two quotes sharing a `CreatedAt`. `IsDeleted = 0` sits in the CTE
-because that is the only place one filter serves both the count and the quote.
+`LEFT JOIN` keeps the three authors with no live quotes — Hypatia, Seneca and
+Sun Tzu come back with `QuoteCount` 0 and a NULL quote. `QuoteId DESC` breaks
+Ada Lovelace's two quotes that share a `CreatedAt`. `IsDeleted = 0` sits in the
+CTE because that is the one place a single filter serves both the count and the
+quote.
 
-## Result set
+A CTE fits here because both facts come from one named pass over one filtered
+set. The correlated version re-derives that set three times per author, with
+nothing keeping the three in agreement.
 
-First ten of nineteen rows, from
+## Result
+
+First rows of nineteen, from
 [`results/joins_and_ctes.txt`](results/joins_and_ctes.txt).
 
 ```
@@ -60,17 +65,4 @@ AuthorId|FullName|QuoteCount|MostRecentQuote|MostRecentQuoteAt
 14|C. A. R. Hoare|7|The average of a good algorithm still has a bad day.|2026-08-15 07:50:00
 15|Frederick P. Brooks Jr.|7|Documentation is the part of a design that outlives the designer.|2026-08-12 14:05:00
 5|Mark Twain|6|Travel cures certainty faster than argument.|2026-08-09 10:50:00
-8|Alan Turing|5|A question worth asking survives a precise phrasing.|2026-08-11 07:30:00
-12|Barbara Liskov|5|The interface is the contract; the code is only evidence.|2026-08-08 08:05:00
-13|Leslie Lamport|5|Consensus is expensive because disagreement is cheap.|2026-08-10 16:35:00
-1|Aristotle|4|Naming a thing well is half of understanding it.|2026-07-22 16:40:00
-9|Grace Hopper|4|A nanosecond is a length before it is a duration.|2026-08-13 15:20:00
 ```
-
-Hypatia, Seneca and Sun Tzu come back last with `QuoteCount` 0 and a NULL quote.
-
-## Why a CTE here over a correlated subquery
-
-Because both facts fall out of one named pass over one filtered set, where the
-correlated version re-derives that set three times per author with nothing
-forcing the three to stay in agreement.
