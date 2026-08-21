@@ -1,0 +1,30 @@
+One request: GET /api/quotes/by-author  (5,000 quotes across 200 authors)
+EF Core command log at Debug, EnableSensitiveDataLogging on (Development).
+
+Executed DbCommand entries in this request: 201
+
+--- command 1 of 201 ---
+[10:04:28 INF] TraceId=7c48cd8909e3210dd3405cfed0573e01 Executed DbCommand (22ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+SELECT DISTINCT "q"."Author"
+FROM "Quotes" AS "q"
+WHERE NOT ("q"."IsDeleted")
+
+--- command 2 of 201 ---
+[10:04:29 INF] TraceId=7c48cd8909e3210dd3405cfed0573e01 Executed DbCommand (11ms) [Parameters=[@author='Author 002' (Size = 10)], CommandType='Text', CommandTimeout='30']
+SELECT "q"."Id", "q"."Author", "q"."IsDeleted", "q"."OwnerId", "q"."Text"
+FROM "Quotes" AS "q"
+WHERE NOT ("q"."IsDeleted") AND "q"."Author" = @author
+
+--- command 3 of 201 ---
+[10:04:29 INF] TraceId=7c48cd8909e3210dd3405cfed0573e01 Executed DbCommand (0ms) [Parameters=[@author='Author 003' (Size = 10)], CommandType='Text', CommandTimeout='30']
+SELECT "q"."Id", "q"."Author", "q"."IsDeleted", "q"."OwnerId", "q"."Text"
+FROM "Quotes" AS "q"
+WHERE NOT ("q"."IsDeleted") AND "q"."Author" = @author
+
+--- command 201 of 201 ---
+[10:04:29 INF] TraceId=7c48cd8909e3210dd3405cfed0573e01 Executed DbCommand (0ms) [Parameters=[@author='Author 001' (Size = 10)], CommandType='Text', CommandTimeout='30']
+SELECT "q"."Id", "q"."Author", "q"."IsDeleted", "q"."OwnerId", "q"."Text"
+FROM "Quotes" AS "q"
+WHERE NOT ("q"."IsDeleted") AND "q"."Author" = @author
+
+[10:04:29 INF] TraceId=7c48cd8909e3210dd3405cfed0573e01 HTTP GET /api/quotes/by-author responded 200 in 943.0183 ms

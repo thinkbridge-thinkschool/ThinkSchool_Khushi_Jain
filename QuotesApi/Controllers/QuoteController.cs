@@ -80,6 +80,33 @@ public static class QuoteController
             });
         });
 
+        // Day 11 baseline: deliberately naive. One query per author, each
+        // filtering an unindexed column.
+        group.MapGet("/by-author", async (
+            QuotesDbContext db,
+            CancellationToken cancellationToken) =>
+        {
+            var authors = await db.Quotes
+                .Where(q => !q.IsDeleted)
+                .Select(q => q.Author)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
+            var byAuthor = new List<object>(authors.Count);
+
+            foreach (var author in authors)
+            {
+                var quotes = await db.Quotes
+                    .Where(q => !q.IsDeleted && q.Author == author)
+                    .AsNoTracking()
+                    .ToListAsync(cancellationToken);
+
+                byAuthor.Add(new { author, quotes = quotes.Select(q => q.Text) });
+            }
+
+            return Results.Ok(byAuthor);
+        });
+
         group.MapGet("/{id:int}", async (
             int id,
             IQuoteRepository repository,

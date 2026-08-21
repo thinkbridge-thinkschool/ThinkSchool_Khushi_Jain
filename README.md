@@ -176,6 +176,15 @@ timing.
 | Change tracker, identity resolution, `AsNoTracking` on a 10,000-row read | `QuotesApi.Tests/ChangeTrackingTests.cs`, `QuotesApi.Tests/CHANGE_TRACKING.md` |
 | Query translation, DTO projection, a caught client evaluation | `QuotesApi.Tests/QueryTranslationTests.cs`, `QuotesApi.Tests/QUERY_TRANSLATION.md` |
 
+### Day 11 — profile a slow endpoint
+
+| Task | Where |
+|---|---|
+| A deliberately slow endpoint, profiled under load | `Controllers/QuoteController.cs`, `docs/day11-slow-endpoint/` — `README.md`, `slow_endpoint.sql`, `results/` |
+
+`GET /api/quotes/by-author` exists to be measured, not to be used. It runs against a separate
+seeded SQLite file, so profiling it leaves the ordinary dev database alone.
+
 ## Tests
 
 ```bash

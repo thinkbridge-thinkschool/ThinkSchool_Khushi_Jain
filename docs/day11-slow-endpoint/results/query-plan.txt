@@ -1,0 +1,20 @@
+sqlite EXPLAIN QUERY PLAN against QuotesApi/quotes-day11.db (5,000 rows, 200 authors)
+sqlite version: 3.35.5
+
+--- author list (1 per request) ---
+SELECT DISTINCT "q"."Author"
+FROM "Quotes" AS "q"
+WHERE NOT ("q"."IsDeleted");
+
+3|0|0|SCAN TABLE Quotes AS q
+13|0|0|USE TEMP B-TREE FOR DISTINCT
+
+--- per-author read (200 per request) ---
+SELECT "q"."Id", "q"."Author", "q"."IsDeleted", "q"."OwnerId", "q"."Text"
+FROM "Quotes" AS "q"
+WHERE NOT ("q"."IsDeleted") AND "q"."Author" = 'Author 001';
+
+2|0|0|SCAN TABLE Quotes AS q
+
+--- indexes on Quotes ---
+(no rows means the table has no index other than the integer primary key)
