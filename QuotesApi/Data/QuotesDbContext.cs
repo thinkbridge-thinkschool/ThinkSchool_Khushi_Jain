@@ -16,6 +16,10 @@ public class QuotesDbContext(DbContextOptions<QuotesDbContext> options)
     {
         base.OnModelCreating(modelBuilder);
 
+        // Text is left out: SQL Server cannot key an index on nvarchar(max).
+        modelBuilder.Entity<Quote>()
+            .HasIndex(q => new { q.Author, q.IsDeleted });
+
         modelBuilder.Entity<Collection>(collection =>
         {
             collection.Property(c => c.Name)

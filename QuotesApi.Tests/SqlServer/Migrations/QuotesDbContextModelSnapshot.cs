@@ -54,7 +54,7 @@ namespace QuotesApi.Tests.SqlServer.Migrations
 
                     b.Property<string>("Author")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
@@ -67,6 +67,8 @@ namespace QuotesApi.Tests.SqlServer.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Author", "IsDeleted");
 
                     b.ToTable("Quotes");
                 });

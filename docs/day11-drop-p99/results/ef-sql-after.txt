@@ -1,0 +1,15 @@
+One request: GET /api/quotes/by-author  (5,000 quotes across 200 authors)
+EF Core command log at Debug, EnableSensitiveDataLogging on (Development).
+This is the first request after startup, so its 439 ms includes JIT and per-command
+logging. The load-test numbers are in bombardier-after.txt.
+
+Executed DbCommand entries in this request: 1
+
+--- command 1 of 1 ---
+[11:30:15 INF] TraceId=6a84715a9e5c6b48353b7df016222ab2 Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+SELECT "q"."Author", "q"."Text"
+FROM "Quotes" AS "q"
+WHERE NOT ("q"."IsDeleted")
+ORDER BY "q"."Author"
+
+[11:30:15 INF] TraceId=6a84715a9e5c6b48353b7df016222ab2 HTTP GET /api/quotes/by-author responded 200 in 439.2999 ms

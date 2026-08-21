@@ -1,0 +1,20 @@
+bombardier v1.2.6, 10 connections, 30s. Same 5,000 quotes across 200 authors as piece 1.
+API: dotnet run -c Release, Development environment, EF command log at Warning,
+OTEL_SDK_DISABLED=true. Five warm-up requests before the measured run.
+p99 across the four runs of the final build: 20.09, 20.98, 21.63, 31.25 ms.
+The 31.25 ms run was the first after a rebuild; the run below is the warm one.
+
+Bombarding http://localhost:5104/api/quotes/by-author for 30s using 10 connection(s)
+Statistics        Avg      Stdev        Max
+  Reqs/sec       893.06     174.18    1672.35
+  Latency       11.31ms     2.72ms    56.78ms
+  Latency Distribution
+     50%    11.09ms
+     75%    13.37ms
+     90%    15.80ms
+     95%    17.00ms
+     99%    20.09ms
+  HTTP codes:
+    1xx - 0, 2xx - 26518, 3xx - 0, 4xx - 0, 5xx - 0
+    others - 0
+  Throughput:    89.59MB/s

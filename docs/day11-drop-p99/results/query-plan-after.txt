@@ -1,0 +1,13 @@
+sqlite EXPLAIN QUERY PLAN against QuotesApi/quotes-day11.db (5,000 rows, 200 authors)
+sqlite version: 3.35.5
+
+--- the one query the endpoint now runs ---
+SELECT "q"."Author", "q"."Text"
+FROM "Quotes" AS "q"
+WHERE NOT ("q"."IsDeleted")
+ORDER BY "q"."Author";
+
+4|0|0|SCAN TABLE Quotes AS q USING INDEX IX_Quotes_Author_IsDeleted
+
+--- indexes on Quotes ---
+('IX_Quotes_Author_IsDeleted', 'CREATE INDEX "IX_Quotes_Author_IsDeleted" ON "Quotes" ("Author", "IsDeleted")')

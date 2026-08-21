@@ -180,10 +180,13 @@ timing.
 
 | Task | Where |
 |---|---|
-| A deliberately slow endpoint, profiled under load | `Controllers/QuoteController.cs`, `docs/day11-slow-endpoint/` — `README.md`, `slow_endpoint.sql`, `results/` |
+| A deliberately slow endpoint, profiled under load | `docs/day11-slow-endpoint/` — `README.md`, `slow_endpoint.sql`, `results/` |
+| Dropping its p99 by 10× | `Controllers/QuoteController.cs`, `Data/QuotesDbContext.cs`, `Migrations/`, `docs/day11-drop-p99/` |
 
 `GET /api/quotes/by-author` exists to be measured, not to be used. It runs against a separate
-seeded SQLite file, so profiling it leaves the ordinary dev database alone.
+seeded SQLite file, so profiling it leaves the ordinary dev database alone. The endpoint in the
+repository is the fixed one — piece 1 records what it looked like before, and its numbers are the
+"before" column of piece 2.
 
 ## Tests
 

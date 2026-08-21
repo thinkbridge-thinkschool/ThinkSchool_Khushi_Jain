@@ -80,29 +80,20 @@ public static class QuoteController
             });
         });
 
-        // Day 11 baseline: deliberately naive. One query per author, each
-        // filtering an unindexed column.
         group.MapGet("/by-author", async (
             QuotesDbContext db,
             CancellationToken cancellationToken) =>
         {
-            var authors = await db.Quotes
+            // One query, two columns, grouped in memory.
+            var rows = await db.Quotes
                 .Where(q => !q.IsDeleted)
-                .Select(q => q.Author)
-                .Distinct()
+                .OrderBy(q => q.Author)
+                .Select(q => new { q.Author, q.Text })
                 .ToListAsync(cancellationToken);
 
-            var byAuthor = new List<object>(authors.Count);
-
-            foreach (var author in authors)
-            {
-                var quotes = await db.Quotes
-                    .Where(q => !q.IsDeleted && q.Author == author)
-                    .AsNoTracking()
-                    .ToListAsync(cancellationToken);
-
-                byAuthor.Add(new { author, quotes = quotes.Select(q => q.Text) });
-            }
+            var byAuthor = rows
+                .GroupBy(row => row.Author)
+                .Select(group => new { author = group.Key, quotes = group.Select(row => row.Text) });
 
             return Results.Ok(byAuthor);
         });
