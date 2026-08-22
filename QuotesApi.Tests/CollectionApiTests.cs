@@ -62,21 +62,29 @@ public class CollectionApiTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task AddItem_ToOwnCollection_ReturnsCollectionWithTheQuote()
+    public async Task AddItem_ToOwnCollection_ThenTheReadModelCarriesTheQuoteText()
     {
         AuthorizeAs(Owner);
         var collectionId = await CreateCollectionAsync();
 
+        var created = await Client.PostAsJsonAsync(
+            "/api/quotes",
+            new CreateQuoteRequest("Grace Hopper", "A ship in port is safe."));
+        var quoteId = (await created.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("id").GetInt32();
+
         var response = await Client.PostAsJsonAsync(
             $"/api/collections/{collectionId}/items",
-            new AddCollectionItemRequest(7));
+            new AddCollectionItemRequest(quoteId));
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
-        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
-        var items = body.GetProperty("items");
+        var details = await Client.GetFromJsonAsync<JsonElement>(
+            $"/api/collections/{collectionId}");
+        var items = details.GetProperty("items");
         items.GetArrayLength().Should().Be(1);
-        items[0].GetProperty("quoteId").GetInt32().Should().Be(7);
+        items[0].GetProperty("quoteId").GetInt32().Should().Be(quoteId);
+        items[0].GetProperty("author").GetString().Should().Be("Grace Hopper");
     }
 
     /// <summary>

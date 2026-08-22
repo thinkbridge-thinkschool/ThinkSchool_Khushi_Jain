@@ -266,5 +266,8 @@ public static class InfrastructureExtensions
 
         builder.Services.AddScoped<IQuoteRepository, QuoteRepository>();
         builder.Services.AddScoped<ICollectionRepository, CollectionRepository>();
+
+        builder.Services.AddScoped<AddQuoteToCollectionHandler>();
+        builder.Services.AddScoped<CollectionDetailsQuery>();
     }
 }

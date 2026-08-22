@@ -183,6 +183,16 @@ timing.
 | A deliberately slow endpoint, profiled under load | `docs/day11-slow-endpoint/` — `README.md`, `slow_endpoint.sql`, `results/` |
 | Dropping its p99 by 10× | `Controllers/QuoteController.cs`, `Data/QuotesDbContext.cs`, `Migrations/`, `docs/day11-drop-p99/` |
 
+### Day 12 — read models and CQRS-lite
+
+| Task | Where |
+|---|---|
+| One feature split into a command path and a query path | `Services/AddQuoteToCollectionHandler.cs`, `Services/CollectionDetailsQuery.cs`, `Controllers/CollectionController.cs`, `QuotesApi.Tests/ReadModelTests.cs`, `docs/day12-read-models/` |
+
+Adding a quote to a collection goes through the command handler and returns `204`. The collection
+detail screen goes through the query, which projects one untracked statement carrying the quote
+author and text the aggregate never holds.
+
 `GET /api/quotes/by-author` exists to be measured, not to be used. It runs against a separate
 seeded SQLite file, so profiling it leaves the ordinary dev database alone. The endpoint in the
 repository is the fixed one — piece 1 records what it looked like before, and its numbers are the

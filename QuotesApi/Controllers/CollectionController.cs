@@ -3,7 +3,7 @@ using QuotesApi.Authorization;
 using QuotesApi.Contracts;
 using QuotesApi.Models;
 using QuotesApi.Repositories;
-using QuotesApi.Time;
+using QuotesApi.Services;
 
 namespace QuotesApi.Controllers;
 
@@ -52,34 +52,28 @@ public static class CollectionController
 
         group.MapGet("/{id:int}", async (
             int id,
-            ICollectionRepository repository,
+            CollectionDetailsQuery query,
             CancellationToken cancellationToken) =>
         {
-            var collection = await repository.GetByIdAsync(id, cancellationToken);
+            var details = await query.RunAsync(id, cancellationToken);
 
-            return collection is null
+            return details is null
                 ? Results.NotFound()
-                : Results.Ok(ToResponse(collection));
+                : Results.Ok(details);
         });
 
         group.MapPost("/{id:int}/items", async (
             int id,
             AddCollectionItemRequest request,
-            ICollectionRepository repository,
-            IClock clock,
+            AddQuoteToCollectionHandler handler,
             ILogger<Program> logger,
             CancellationToken cancellationToken) =>
         {
-            var collection = await repository.GetByIdAsync(id, cancellationToken);
-
-            if (collection is null)
-            {
-                return Results.NotFound();
-            }
+            bool added;
 
             try
             {
-                collection.AddItem(request.QuoteId, clock.UtcNow);
+                added = await handler.HandleAsync(id, request.QuoteId, cancellationToken);
             }
             catch (CollectionDomainException ex)
             {
@@ -89,14 +83,17 @@ public static class CollectionController
                     detail: ex.Message);
             }
 
-            await repository.UpdateAsync(collection, cancellationToken);
+            if (!added)
+            {
+                return Results.NotFound();
+            }
 
             logger.LogInformation(
                 "Added quote {QuoteId} to collection {CollectionId}",
                 request.QuoteId,
                 id);
 
-            return Results.Ok(ToResponse(collection));
+            return Results.NoContent();
         }).RequireAuthorization("can-edit-quotes");
 
         group.MapDelete("/{id:int}/items/{quoteId:int}", async (
