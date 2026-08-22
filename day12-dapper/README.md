@@ -161,19 +161,6 @@ shape you need is one EF will not generate, or you are hand-tuning against a que
 SQL and let Dapper map it — and accept that you have taken ownership of the column mapping, the
 null handling on outer joins, and the type conversions EF was doing for you.
 
-## Notes
-
-- The Dapper query is **not** wired into the API. The exercise asks for the comparison, and
-  `GET /api/collections/{id}` still runs the EF query, so piece 1's evidence stands.
-- Writing the SQL by hand meant handling what EF hid: SQLite has no `datetimeoffset`, so `AddedAt`
-  comes back as the TEXT EF wrote and is parsed in the mapper, and the outer join makes every item
-  column nullable, so `ItemCount` counts rows with an item while `Items` keeps only rows with a
-  quote.
-- SQLite only. On SQL Server the planner may push the predicate into EF's derived table, which
-  would shrink the gap.
-- The absolute numbers are from one machine; the ratio and the attribution are点
-  the findings, not the microseconds.
-
 ## Run it
 
 ```bash
