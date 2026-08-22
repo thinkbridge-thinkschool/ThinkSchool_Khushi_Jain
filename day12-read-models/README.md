@@ -6,7 +6,7 @@ screen is a query. No MediatR, no event sourcing — just two classes and two se
 | | Write path | Read path |
 |---|---|---|
 | Endpoint | `POST /api/collections/{id}/items` | `GET /api/collections/{id}` |
-| Class | [`AddQuoteToCollectionHandler`](../../QuotesApi/Services/AddQuoteToCollectionHandler.cs) | [`CollectionDetailsQuery`](../../QuotesApi/Services/CollectionDetailsQuery.cs) |
+| Class | [`AddQuoteToCollectionHandler`](../QuotesApi/Services/AddQuoteToCollectionHandler.cs) | [`CollectionDetailsQuery`](../QuotesApi/Services/CollectionDetailsQuery.cs) |
 | Model | the `Collection` aggregate, tracked | `CollectionDetails`, a projection |
 | Talks to | `ICollectionRepository` | `QuotesDbContext` directly |
 | Returns | `204 No Content` | the read model |
@@ -83,7 +83,7 @@ db.Collections
 ```
 
 The SQL that comes out, printed by
-[`ReadModelTests`](../../QuotesApi.Tests/ReadModelTests.cs):
+[`ReadModelTests`](../QuotesApi.Tests/ReadModelTests.cs):
 
 ```sql
 SELECT "c2"."Id", "c2"."Name", "c2"."OwnerId", "c2"."c", "s"."Id", "s"."Author", "s"."Text", "s"."AddedAt", "s"."Id0"

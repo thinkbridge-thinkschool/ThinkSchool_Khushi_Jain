@@ -187,7 +187,7 @@ timing.
 
 | Task | Where |
 |---|---|
-| One feature split into a command path and a query path | `Services/AddQuoteToCollectionHandler.cs`, `Services/CollectionDetailsQuery.cs`, `Controllers/CollectionController.cs`, `QuotesApi.Tests/ReadModelTests.cs`, `docs/day12-read-models/` |
+| One feature split into a command path and a query path | `Services/AddQuoteToCollectionHandler.cs`, `Services/CollectionDetailsQuery.cs`, `Controllers/CollectionController.cs`, `QuotesApi.Tests/ReadModelTests.cs`, `day12-read-models/` |
 
 Adding a quote to a collection goes through the command handler and returns `204`. The collection
 detail screen goes through the query, which projects one untracked statement carrying the quote
