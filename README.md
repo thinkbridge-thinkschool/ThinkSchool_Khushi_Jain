@@ -199,6 +199,15 @@ seeded SQLite file, so profiling it leaves the ordinary dev database alone. The 
 repository is the fixed one — piece 1 records what it looked like before, and its numbers are the
 "before" column of piece 2.
 
+### Day 13 — signals, zoneless, standalone
+
+| Task | Where |
+|---|---|
+| A standalone Angular 21 component over `GET /api/quotes` | `day13-signals/` — `src/main.ts`, `README.md` |
+
+The only frontend in the repository. It reads the API through the dev server's proxy, since the API
+has no CORS policy.
+
 ## Tests
 
 ```bash
