@@ -204,9 +204,10 @@ repository is the fixed one — piece 1 records what it looked like before, and 
 | Task | Where |
 |---|---|
 | A standalone Angular 21 component over `GET /api/quotes` | `day13-signals/` — `src/main.ts`, `README.md` |
+| A list + detail component with a service, typed responses, and a stale-response guard | `day13_list_detail/` — `src/main.ts`, `README.md` |
 
-The only frontend in the repository. It reads the API through the dev server's proxy, since the API
-has no CORS policy.
+Both read the API through the dev server's proxy, since the API has no CORS policy. Two separate
+Angular projects rather than one growing app, so piece 1 stays exactly as submitted.
 
 ## Tests
 
