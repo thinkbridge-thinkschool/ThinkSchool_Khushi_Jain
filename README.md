@@ -209,6 +209,15 @@ repository is the fixed one — piece 1 records what it looked like before, and 
 Both read the API through the dev server's proxy, since the API has no CORS policy. Two separate
 Angular projects rather than one growing app, so piece 1 stays exactly as submitted.
 
+### Day 14 — reactive forms + accessibility
+
+| Task | Where |
+|---|---|
+| A create-a-quote form over `POST /api/quotes`, using Signal Forms and full a11y wiring | `day14_reactive_quotes/` — `src/main.ts`, `README.md` |
+
+`POST /api/quotes` requires a bearer token (`quotes.write` scope), so the form has a plain
+dev-only token field alongside the real Author/Text fields.
+
 ## Tests
 
 ```bash
