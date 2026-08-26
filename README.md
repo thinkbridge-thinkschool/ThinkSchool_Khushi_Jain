@@ -1,6 +1,6 @@
 # ThinkSchool — Khushi Jain
 
-A quotes API built across the Thinkbridge Day 1–5 programme: ASP.NET Core 10 minimal APIs, EF Core,
+A quotes API built across the Thinkbridge programme: ASP.NET Core 10 minimal APIs, EF Core,
 self-issued JWT plus Entra ID auth, Serilog, OpenTelemetry, and deployment to Azure Container Apps.
 
 Live: `https://quotes-api.wonderfulplant-5f428237.eastus.azurecontainerapps.io`
@@ -214,6 +214,7 @@ Angular projects rather than one growing app, so piece 1 stays exactly as submit
 | Task | Where |
 |---|---|
 | A create-a-quote form over `POST /api/quotes`, using Signal Forms and full a11y wiring | `day14_reactive_quotes/` — `src/main.ts`, `README.md` |
+| The same form rebuilt with Signal Forms, compared to Reactive Forms | `day14_signal_forms/` — `src/signal-quote.ts`, `README.md` |
 
 `POST /api/quotes` requires a bearer token (`quotes.write` scope), so the form has a plain
 dev-only token field alongside the real Author/Text fields.
