@@ -1,0 +1,523 @@
+:root {
+  --page: #f6f4fb;
+  --card: #ffffff;
+  --line: #e6e1f2;
+  --ink: #1b1826;
+  --muted: #6b6579;
+  --accent: #6d3bd4;
+  --accent-dark: #5a30b4;
+  --accent-wash: #f1ecfd;
+  --good-bg: #edf7ee;
+  --good-line: #c3e3c7;
+  --good-ink: #1e4620;
+  --bad-bg: #fdeeee;
+  --bad-line: #f2caca;
+  --bad-ink: #7d1f1f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font-family: 'Avenir Next LT Pro', 'Avenir Next', Mulish, -apple-system, 'Segoe UI', Roboto,
+    sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.shell {
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 4rem;
+}
+
+.masthead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.masthead h1 {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.masthead p {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.who {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.card > h2 {
+  margin: 0 0 1.1rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.card > h2 + .hint {
+  margin-top: -0.85rem;
+}
+
+.hint {
+  margin: 0 0 1.1rem;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+label {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+input {
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  font-size: 0.95rem;
+}
+
+input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: var(--accent);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.row + .row {
+  margin-top: 0.6rem;
+}
+
+.spacer {
+  flex: 1;
+}
+
+button {
+  padding: 0.45rem 1rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: var(--accent-dark);
+}
+
+button:disabled {
+  background: #cdbdf0;
+  cursor: not-allowed;
+}
+
+button.quiet {
+  background: transparent;
+  border-color: var(--line);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+button.quiet:hover:not(:disabled) {
+  background: var(--accent-wash);
+}
+
+button.quiet:disabled {
+  color: var(--muted);
+  background: transparent;
+  cursor: not-allowed;
+}
+
+button.link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-size: 0.88rem;
+  text-decoration: underline;
+}
+
+button.link:hover:not(:disabled) {
+  background: none;
+  color: var(--accent-dark);
+}
+
+.page-label {
+  font-size: 0.9rem;
+  color: var(--muted);
+  padding: 0 0.35rem;
+}
+
+.quotes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.quotes li {
+  padding: 0.85rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.quotes li:first-child {
+  border-top: none;
+  padding-top: 0.25rem;
+}
+
+.quotes .text {
+  display: block;
+}
+
+.quotes .by {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.orphan {
+  margin-left: 0.4rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.count {
+  margin: 1rem 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.state {
+  margin: 0;
+  color: var(--muted);
+}
+
+.banner {
+  margin: 1rem 0 0;
+  padding: 0.7rem 0.95rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.banner.good {
+  background: var(--good-bg);
+  border: 1px solid var(--good-line);
+  color: var(--good-ink);
+}
+
+.banner.bad {
+  background: var(--bad-bg);
+  border: 1px solid var(--bad-line);
+  color: var(--bad-ink);
+}
+
+.log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.log li {
+  padding: 0.25rem 0;
+}
+
+.centre {
+  max-width: 26rem;
+  margin: 4rem auto 0;
+}
+
+/* Nav across the pieces. */
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.tabs a {
+  padding: 0.5rem 0.85rem;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.tabs a:hover {
+  color: var(--accent);
+}
+
+.tabs a.on {
+  border-bottom-color: var(--accent);
+  color: var(--accent);
+}
+
+.nav-link {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.nav-link:hover {
+  text-decoration: underline;
+}
+
+/* Form pages: the fields the shared input rules do not cover, plus the
+   invalid state the aria-invalid attribute already carries. */
+textarea {
+  width: 100%;
+  min-height: 6rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  font-size: 0.95rem;
+  resize: vertical;
+}
+
+textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: var(--accent);
+}
+
+input[aria-invalid='true'],
+textarea[aria-invalid='true'] {
+  border-color: var(--bad-ink);
+}
+
+.field-errors {
+  list-style: none;
+  margin: 0.15rem 0 0;
+  padding: 0;
+  color: var(--bad-ink);
+  font-size: 0.85rem;
+}
+
+/* The list + detail page's detail pane. */
+.detail {
+  display: grid;
+  grid-template-columns: 6rem 1fr;
+  gap: 0.4rem 1rem;
+  margin: 0;
+}
+
+.detail dt {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.detail dd {
+  margin: 0;
+}
+
+/* Signed-in indicator in the masthead. */
+.badge {
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--accent-wash);
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+code {
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.05);
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 0.85em;
+}
+
+/* ---- Presentation pass ----------------------------------------------------
+   The quote is the content, so it gets the type weight; the attribution sits
+   under it in small caps. Separators stay hairline: the palette carries the
+   structure, not borders. */
+.masthead {
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.masthead h1 {
+  font-size: 2rem;
+}
+
+.tabs {
+  margin-top: 1.25rem;
+}
+
+.card {
+  padding: 1.75rem 2rem;
+}
+
+.quotes li {
+  padding: 1.15rem 0;
+}
+
+.quotes li:first-child {
+  padding-top: 0.5rem;
+}
+
+.quotes .text {
+  font-size: 1.08rem;
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+.quotes .by {
+  margin-top: 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.quotes .by::before {
+  content: '— ';
+}
+
+.orphan {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+/* The list + detail page makes the quote itself the control, so it has to read
+   as body text rather than as a link. */
+.quotes button.link {
+  display: block;
+  text-align: left;
+  font-size: 1.08rem;
+  line-height: 1.6;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.quotes button.link:hover:not(:disabled) {
+  color: var(--accent);
+}
+
+.quotes button.link[aria-current='true'] {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.page-label {
+  min-width: 6.5rem;
+  text-align: center;
+}
+
+.count {
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--line);
+}
+
+.detail dd {
+  line-height: 1.6;
+}
+
+/*
+  Day 16. The router runs every navigation inside document.startViewTransition(),
+  which gives the browser these pseudo-elements to animate. `root` is everything
+  that is not separately named; the per-quote names set in the routed list and
+  detail templates are what morph one card into the other.
+
+  Zero duration is the default, so every navigation outside the Day 16 pair
+  looks exactly as it did before this was switched on. main.ts adds
+  `routed-transition` to <html> for the length of a routed list <-> detail
+  navigation, and only that one animates.
+*/
+::view-transition-group(*),
+::view-transition-old(*),
+::view-transition-new(*) {
+  animation-duration: 0s;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :root.routed-transition::view-transition-group(*) {
+    animation-duration: 260ms;
+  }
+
+  :root.routed-transition::view-transition-old(root) {
+    animation: fade-out 160ms ease both;
+  }
+
+  :root.routed-transition::view-transition-new(root) {
+    animation: fade-in 260ms ease both;
+  }
+}
+
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.quotes a.text {
+  color: inherit;
+  text-decoration: none;
+}
+
+.quotes a.text:hover {
+  color: var(--accent-dark);
+  text-decoration: underline;
+}
