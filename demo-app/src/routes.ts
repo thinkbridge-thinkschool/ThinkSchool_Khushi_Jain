@@ -1,4 +1,5 @@
 import type { Routes } from '@angular/router';
+import { CollectionPageComponent } from './collection-page';
 import { ListDetailPageComponent } from './list-detail-page';
 import { LoginPageComponent } from './login-page';
 import { QuotesPageComponent } from './quotes-page';
@@ -42,6 +43,10 @@ export const routes: Routes = [
       },
     ],
   },
+
+  // Day 16 piece 2. Guarded, because everything except reading a collection
+  // needs the can-edit-quotes policy.
+  { path: 'collection', component: CollectionPageComponent, canActivate: [authGuard] },
 
   { path: 'login', component: LoginPageComponent },
   { path: '', pathMatch: 'full', redirectTo: 'quotes' },

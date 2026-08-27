@@ -25,6 +25,7 @@ import { SessionStore } from './session';
         <a routerLink="/create-signal" routerLinkActive="on">Signal Forms</a>
         <a routerLink="/http" routerLinkActive="on">HTTP layer</a>
         <a routerLink="/routing" routerLinkActive="on">Routing</a>
+        <a routerLink="/collection" routerLinkActive="on">Collection</a>
       </nav>
 
       @if (!session.isSignedIn()) {

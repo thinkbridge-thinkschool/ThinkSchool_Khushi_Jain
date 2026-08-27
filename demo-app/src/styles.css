@@ -13,6 +13,9 @@
   --bad-bg: #fdeeee;
   --bad-line: #f2caca;
   --bad-ink: #7d1f1f;
+  --warn-bg: #fdf6e7;
+  --warn-line: #ecd9a6;
+  --warn-ink: #6b4e10;
 }
 
 * {
@@ -252,6 +255,12 @@ button.link:hover:not(:disabled) {
   background: var(--bad-bg);
   border: 1px solid var(--bad-line);
   color: var(--bad-ink);
+}
+
+.banner.warn {
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-line);
+  color: var(--warn-ink);
 }
 
 .log {
@@ -520,4 +529,29 @@ code {
 .quotes a.text:hover {
   color: var(--accent-dark);
   text-decoration: underline;
+}
+
+/* Day 16 piece 2. A small action sitting inside a quote's byline. Deliberately
+   not .link: the list + detail page makes .quotes button.link a block-level
+   body-text control, which is right there and wrong here. */
+.inline-action {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent-dark);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.inline-action:hover:not(:disabled) {
+  color: var(--accent);
+}
+
+.inline-action:disabled {
+  color: var(--muted);
+  text-decoration: none;
+  cursor: default;
 }
