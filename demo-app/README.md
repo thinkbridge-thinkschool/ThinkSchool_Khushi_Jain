@@ -1,14 +1,7 @@
 # demo-app
 
-The Angular pieces of the programme in one app, over the same Week-1 API.
-
-Days 13 to 15 each stay in their own folder exactly as they were submitted (`day13-signals/`,
-`day13_list_detail/`, `day14_reactive_quotes/`, `day14_signal_forms/`, `day15_http_interceptors/`),
-and this app was built to demonstrate them together in one place.
-
-From Day 16 on, that changed: a new piece is added here and nowhere else, because this is the app
-that keeps growing into a complete one. So this app is now both the demonstration of the earlier
-pieces and the home of the newer ones.
+An Angular 21 client for the Quotes API — signals, zoneless, standalone components, over an
+ASP.NET Core 10 minimal API.
 
 ## Setup, once
 
@@ -46,93 +39,73 @@ rows created by another account answer 403 and are reported rather than removed.
 
 ## The pages
 
-| Tab | Piece | What it shows |
-|---|---|---|
-| Quotes | Day 13 piece 1 | `signal`/`computed`/`effect`, built-in control flow, `inject()` |
-| List & detail | Day 13 piece 2 | List and detail loading independently, with a stale-response guard |
-| Create a quote | Day 14 piece 1 | Reactive Forms with full a11y wiring |
-| Signal Forms | Day 14 piece 2 | The same form on the Signal Forms preview API |
-| HTTP layer | Day 15 | The interceptor chain, with buttons that force each failure |
-| Routing | Day 16 | `/routing` and `/routing/:id`, the detail lazy-loaded, with a View Transition between them |
-
-The Day 16 write-up — the brief, the API contract, the verification log and the bugs — is in
-[`DAY16-routing.md`](DAY16-routing.md). The earlier pieces keep their write-ups in their own folders.
+| Tab | What it does |
+|---|---|
+| Quotes | Browses quotes with `signal`/`computed`/`effect` and the built-in control flow |
+| List & detail | List and detail load independently, with a stale-response guard |
+| Create a quote | Adds a quote through Reactive Forms, with full a11y wiring |
+| Signal Forms | The same form built on the Signal Forms API |
+| HTTP layer | The interceptor chain, with buttons that force each failure |
+| Routing | `/routing` and `/routing/:id`, the detail lazy-loaded, with a View Transition between them |
+| Collection | One collection's state in signals in a service, over `/api/collections` |
 
 ## How it signs in
 
-There is no login page in the app. `main.ts` reads `public/dev-session.json`, calls
+There is no login page in the nav. `main.ts` reads `public/dev-session.json`, calls
 `POST /api/auth/login` with plain `fetch` before the app is bootstrapped, and seeds the result into
 `SessionStore` through an app initializer — which runs before the router's first navigation, so the
 guard on the writing pages sees a session that is already in place. From then on `authInterceptor`
 attaches the bearer token and `refreshInterceptor` rotates it on a 401.
 
-Every failure in that path returns null instead of throwing. The app still starts, the two
-read-only pages still work, and a banner says what to fix.
+Every failure in that path returns null instead of throwing. The app still starts, the read-only
+pages still work, and a banner says what to fix.
 
 `/login` still exists, just not in the nav. It is reachable by URL as a fallback if the automatic
-sign-in fails or the session is left to expire.
+sign-in fails or the session is left to expire. To watch a guard actually redirect, take
+`public/dev-session.json` away and reload a guarded tab.
 
 The obvious question about this design: the credentials reach the browser. That is acceptable here
 because it is a local development convenience against a local API with a seeded throwaway account,
 and the file is not committed. Nothing like it belongs in a deployed build — production has no
 seeded account to sign in as, and the file it reads would not exist.
 
-## What changed in the merge
+## How it is put together
 
-The pages are the submitted ones, with three differences that come from sharing one HTTP stack.
+Four interceptors are global, so every page gets the auth header, a retry on idempotent GETs, a
+one-shot refresh-and-replay on a 401, and `ProblemDetails` mapped to a typed `AppError`. Because
+`errorMappingInterceptor` is outermost, no page ever receives an `HttpErrorResponse` — every page
+reads `AppError`, and the form pages get `fieldErrors` keyed by the API's own `Author` and `Text`
+without parsing anything themselves.
 
-The four interceptors from Day 15 are now global, so every page gets the auth header, the retry on
-idempotent GETs, the one-shot refresh-and-replay on a 401, and `ProblemDetails` mapped to a typed
-`AppError`. That last one is not optional: `errorMappingInterceptor` means no page ever receives an
-`HttpErrorResponse` again, so each ported page reads `AppError`. The two form pages lost their own
-`ValidationProblemDetails` parsing, since the interceptor already produces `fieldErrors` keyed by
-the API's own `Author` and `Text`.
+Shapes shared across pages (`QuotesPage`, `QuoteSummary`, `QuoteDetail`, `CreatedQuote`) are
+declared once in `http.ts`, and the pages share `styles.css` rather than carrying their own
+component styles.
 
-The dev-only "paste a bearer token" field is gone from both form pages, replaced by the session
-above.
+The route table is in `routes.ts` rather than `main.ts`, so tests can import it without
+bootstrapping the app. Two router features are switched on: `withComponentInputBinding()`, which
+lets routed pages take `:id` and `?page=` as inputs instead of subscribing to `paramMap`, and
+`withViewTransitions()`, filtered in `main.ts` so it fires only when a navigation both starts and
+ends inside `/routing` — every other tab switches instantly.
 
+The Routing tab sits at `/routing` because the Quotes tab already holds `/quotes`. Its detail route
+is the only lazily loaded one; `ng build` emits it as its own chunk, and it is fetched on first
+navigation to a quote, not before.
 
-The pages share `styles.css` rather than carrying their own component styles, so the app reads as
-one app. Shapes shared across pages (`QuotesPage`, `QuoteSummary`, `QuoteDetail`, `CreatedQuote`)
-are declared once in `http.ts`.
+`CollectionStore` is `providedIn: 'root'`, so a collection stays open while you visit other tabs.
+Every writable signal in it is private and every public member is a readonly signal or a computed,
+which makes the store the single writer for that state.
 
-Only one of the two Day 14 folders held a Reactive Forms implementation. `day14_reactive_quotes/`
-was built on Signal Forms despite its name, and the real `ReactiveFormsModule` version was
-`day14_signal_forms/src/reactive-quote-for-comparison.ts`, kept unwired as the thing the piece's
-comparison was tested against. The Create a quote tab is the port of that file, so both approaches
-are present here rather than Signal Forms twice.
-
-## What Day 16 added
-
-The Routing tab is at `/routing`, not `/quotes`, because the Quotes tab already holds that path and
-renaming a submitted piece's route to free it up would be the wrong trade.
-
-Two router features are switched on for it. `withComponentInputBinding()` lets the routed pages take
-`:id` and `?page=` as inputs rather than subscribing to `paramMap`; no other routed component in
-this app declares an input, so nothing else changes. `withViewTransitions()` is filtered in
-`main.ts` so it fires only when a navigation both starts and ends inside `/routing` — every other
-tab keeps the instant switch it had before.
-
-The guard on that tab is real, but you will not see it fire here: the automatic sign-in above puts a
-session in place before the router's first navigation, exactly as it does for the three other
-guarded tabs. `day16_routing/` is the standalone version, where the login page is the front door and
-the redirect is visible.
-
-`quotes-api.ts` holds the two read endpoints for the Day 16 pages. The List & detail tab keeps its
-own copy of the same two calls; deduplicating them would mean editing a submitted piece, which is
-not worth it for four lines.
+`quotes-api.ts` holds the two read endpoints the Routing and Collection tabs share. The List &
+detail tab keeps its own copy of the same two calls.
 
 ## Tests
-
-The Day 15 suites are carried over unchanged.
 
 ```bash
 npx ng test --watch=false
 ```
 
 The mock-based suites need nothing. The live suites need the API running, and the signed-in ones
-skip unless credentials are supplied, which `seed-quotes.sh` already has in
-`public/dev-session.json`:
+skip unless credentials are supplied, which `public/dev-session.json` already has:
 
 ```bash
 QUOTES_EMAIL=$(grep -o '"email"[^,]*' public/dev-session.json | cut -d'"' -f4) QUOTES_PASSWORD=$(grep -o '"password"[^,]*' public/dev-session.json | cut -d'"' -f4) npx ng test --watch=false
