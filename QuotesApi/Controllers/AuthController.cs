@@ -16,6 +16,55 @@ public static class AuthController
     {
         var group = app.MapGroup("/api/auth");
 
+        group.MapPost("/register", async (
+            RegisterRequest request,
+            QuotesDbContext db,
+            TokenService tokens,
+            IClock clock,
+            ILogger<Program> logger,
+            CancellationToken cancellationToken) =>
+        {
+            var email = request.Email.Trim();
+
+            if (await db.Users.AnyAsync(u => u.Email == email, cancellationToken))
+            {
+                return Results.Problem(
+                    statusCode: StatusCodes.Status409Conflict,
+                    title: "That email is already registered.");
+            }
+
+            var user = new User
+            {
+                Email = email,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password)
+            };
+
+            db.Users.Add(user);
+            await db.SaveChangesAsync(cancellationToken);
+
+            var accessToken = tokens.CreateAccessToken(user);
+            var refreshToken = tokens.GenerateRefreshToken();
+
+            db.RefreshTokens.Add(new RefreshToken
+            {
+                TokenHash = tokens.HashRefreshToken(refreshToken),
+                UserId = user.Id,
+                ExpiresAt = clock.UtcNow.Add(RefreshTokenLifetime),
+                FamilyId = Guid.NewGuid()
+            });
+
+            await db.SaveChangesAsync(cancellationToken);
+
+            logger.LogInformation("Registered user {UserId}", user.Id);
+
+            return Results.Created($"/api/auth/register", new
+            {
+                access_token = accessToken,
+                refresh_token = refreshToken,
+                expires_in = tokens.AccessTokenLifetimeSeconds
+            });
+        });
+
         group.MapPost("/login", async (
             LoginRequest request,
             QuotesDbContext db,

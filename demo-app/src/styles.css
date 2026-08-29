@@ -555,3 +555,20 @@ code {
   text-decoration: none;
   cursor: default;
 }
+
+.session {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+button.link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}

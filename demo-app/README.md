@@ -49,26 +49,6 @@ rows created by another account answer 403 and are reported rather than removed.
 | Routing | `/routing` and `/routing/:id`, the detail lazy-loaded, with a View Transition between them |
 | Collection | One collection's state in signals in a service, over `/api/collections` |
 
-## How it signs in
-
-There is no login page in the nav. `main.ts` reads `public/dev-session.json`, calls
-`POST /api/auth/login` with plain `fetch` before the app is bootstrapped, and seeds the result into
-`SessionStore` through an app initializer — which runs before the router's first navigation, so the
-guard on the writing pages sees a session that is already in place. From then on `authInterceptor`
-attaches the bearer token and `refreshInterceptor` rotates it on a 401.
-
-Every failure in that path returns null instead of throwing. The app still starts, the read-only
-pages still work, and a banner says what to fix.
-
-`/login` still exists, just not in the nav. It is reachable by URL as a fallback if the automatic
-sign-in fails or the session is left to expire. To watch a guard actually redirect, take
-`public/dev-session.json` away and reload a guarded tab.
-
-The obvious question about this design: the credentials reach the browser. That is acceptable here
-because it is a local development convenience against a local API with a seeded throwaway account,
-and the file is not committed. Nothing like it belongs in a deployed build — production has no
-seeded account to sign in as, and the file it reads would not exist.
-
 ## How it is put together
 
 Four interceptors are global, so every page gets the auth header, a retry on idempotent GETs, a

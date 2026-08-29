@@ -1,6 +1,6 @@
 import { Component, inject } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { SessionStore } from './session';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { AuthService, SessionStore } from './session';
 
 @Component({
   selector: 'app-root',
@@ -10,30 +10,26 @@ import { SessionStore } from './session';
       <header class="masthead">
         <div>
           <h1>Quotes</h1>
-          <p>Angular 21, signals and zoneless, over an ASP.NET Core 10 minimal API.</p>
         </div>
 
         @if (session.isSignedIn()) {
-          <span class="badge">signed in as {{ session.email() }}</span>
+          <div class="session">
+            <span class="badge">signed in as {{ session.email() }}</span>
+            <button class="quiet" type="button" (click)="signOut()">Sign out</button>
+          </div>
         }
       </header>
 
-      <nav class="tabs" aria-label="Sections">
-        <a routerLink="/quotes" routerLinkActive="on">Quotes</a>
-        <a routerLink="/list-detail" routerLinkActive="on">List &amp; detail</a>
-        <a routerLink="/create" routerLinkActive="on">Create a quote</a>
-        <a routerLink="/create-signal" routerLinkActive="on">Signal Forms</a>
-        <a routerLink="/http" routerLinkActive="on">HTTP layer</a>
-        <a routerLink="/routing" routerLinkActive="on">Routing</a>
-        <a routerLink="/collection" routerLinkActive="on">Collection</a>
-      </nav>
-
-      @if (!session.isSignedIn()) {
-        <p class="banner bad" role="alert">
-          Not signed in, so the pages that write are locked. Copy
-          <code>public/dev-session.example.json</code> to
-          <code>public/dev-session.json</code>, fill in the seeded account, and reload.
-        </p>
+      @if (session.isSignedIn()) {
+        <nav class="tabs" aria-label="Sections">
+          <a routerLink="/quotes" routerLinkActive="on">Quotes</a>
+          <a routerLink="/list-detail" routerLinkActive="on">List &amp; detail</a>
+          <a routerLink="/create" routerLinkActive="on">Create a quote</a>
+          <a routerLink="/create-signal" routerLinkActive="on">Signal Forms</a>
+          <a routerLink="/http" routerLinkActive="on">HTTP layer</a>
+          <a routerLink="/routing" routerLinkActive="on">Routing</a>
+          <a routerLink="/collection" routerLinkActive="on">Collection</a>
+        </nav>
       }
 
       <router-outlet />
@@ -41,5 +37,15 @@ import { SessionStore } from './session';
   `,
 })
 export class AppComponent {
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+
   readonly session = inject(SessionStore);
+
+  signOut(): void {
+    this.auth.signOut().subscribe({
+      next: () => this.router.navigateByUrl('/login'),
+      error: () => this.router.navigateByUrl('/login'),
+    });
+  }
 }

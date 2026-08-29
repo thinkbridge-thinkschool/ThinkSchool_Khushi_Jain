@@ -250,6 +250,9 @@ The key is written to Key Vault. The container receives only the vault's URI and
 through its managed identity, so the value never appears in the container's environment, in the Bicep, or in
 this repository. Use a different key from your local one.
 
+The `demo-app` frontend deploys separately, to Azure Static Web Apps, and reaches this API through a small
+Function App that holds a managed identity on its behalf. See `day17_swa_deploy/README.md`.
+
 ## Known gaps
 
 - **The deployed database is not durable.** SQLite writes to the container's own filesystem with no volume

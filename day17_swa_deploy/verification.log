@@ -1,0 +1,90 @@
+==============================================================
+ Day 17 verification -- 2026-08-29T11:59:28Z
+==============================================================
+WARNING: The behavior of this command has been altered by the following extension: containerapp
+WARNING: The behavior of this command has been altered by the following extension: containerapp
+
+--- 1. what is deployed ------------------------------------
+live site         : https://proud-sky-0fa504d0f.7.azurestaticapps.net
+week-1 api        : https://quotes-api.wonderfulplant-5f428237.eastus.azurecontainerapps.io
+managed-identity  : https://quotes-bff.wonderfulplant-5f428237.eastus.azurecontainerapps.io  (container app)
+bff identity      : id-quotes-bff
+  clientId        : 4e85f37c-e143-47dd-b33f-eabcfbaa6537
+  principalId     : 3dd48b9d-bb51-4bb9-a3ad-21b75534e214
+Backend     State
+----------  ---------
+quotes-bff  Succeeded
+
+--- 2. the site loads --------------------------------------
+GET https://proud-sky-0fa504d0f.7.azurestaticapps.net/ -> 200 in 0.424848s
+GET https://proud-sky-0fa504d0f.7.azurestaticapps.net/list-detail -> 200 (deep link, SPA fallback)
+security headers:
+Strict-Transport-Security: max-age=63072000; includeSubDomains
+Referrer-Policy: no-referrer
+X-Content-Type-Options: nosniff
+Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'sel
+
+--- 3. the managed-identity token --------------------------
+{"aud":"467f0295-3609-488c-a3ff-dd216dc9cf5a","iss":"https://login.microsoftonline.com/5aaf8f39-9480-4424-9f90-2efcd26df931/v2.0","appid":"4e85f37c-e143-47dd-b33f-eabcfbaa6537","oid":"3dd48b9d-bb51-4bb9-a3ad-21b75534e214","roles":null,"scp":null,"exp":1788091118}
+the API validates Entra:Audience=467f0295-3609-488c-a3ff-dd216dc9cf5a and issuer .../v2.0
+
+--- 4. the API accepts that token --------------------------
+POST /api/quotes carrying the managed-identity token:
+{"upstreamStatus":403,"meaning":"token accepted - authenticated but missing the quotes.write scope"}
+403 = authenticated, refused for scope. 401 would mean the token was rejected.
+
+--- 5. GET /api/quotes through the identity ----------------
+HTTP/1.1 200 OK
+x-managed-identity-token: attached
+{"page":1,"size":5,"total":20,"items":[{"id":1,"author":"Grace Hopper","text":"The most dangerous phrase in the language is, we have always done it this way.","ownerId":"claude-dev-test@example.com","ownerActive":true},{"id":2,"author":"Edsger W. Dijkstra","text":"Simplicity is prerequisite for reliability.","ownerId":"claude-dev-test@example.com","ownerActive":true},{"id":3,"author":"Edsger W. Di
+
+--- 6. states exercised ------------------------------------
+GET  /api/quotes/1        -> 200  (detail)
+GET  /api/quotes/999999        -> 404  (not found)
+GET  /api/quotes/abc           -> 404  (refused at the proxy)
+GET  /api/quotes?page=0&size=0 -> 400  (validation)
+POST /api/auth/login bad creds -> 401  (failed sign-in)
+POST https://quotes-api.wonderfulplant-5f428237.eastus.azurecontainerapps.io/api/quotes no token -> 401  (unauthenticated)
+
+--- 7. lighthouse ------------------------------------------
+url: https://proud-sky-0fa504d0f.7.azurestaticapps.net/login?returnUrl=%2Fquotes
+  Performance      100
+  Accessibility    100
+  Best Practices   100
+  SEO              100
+  console errors   0
+
+--- 8. no secret in app settings ---------------------------
+bff container app environment:
+WARNING: The behavior of this command has been altered by the following extension: containerapp
+Name                         Value
+---------------------------  -----------------------------------------------------------------------
+QUOTES_API_BASE_URL          https://quotes-api.wonderfulplant-5f428237.eastus.azurecontainerapps.io
+QUOTES_API_SCOPE             api://467f0295-3609-488c-a3ff-dd216dc9cf5a/.default
+TOKEN_INTROSPECTION_ENABLED  true
+AZURE_CLIENT_ID              4e85f37c-e143-47dd-b33f-eabcfbaa6537
+bff secrets:
+WARNING: The behavior of this command has been altered by the following extension: containerapp
+(empty above means no secret is stored on the container app)
+static web app settings:
+{
+  "QUOTES_API_BASE_URL": "https://quotes-api.wonderfulplant-5f428237.eastus.azurecontainerapps.io",
+  "QUOTES_API_SCOPE": "api://467f0295-3609-488c-a3ff-dd216dc9cf5a/.default",
+  "TOKEN_INTROSPECTION_ENABLED": "true"
+}
+registry pull uses:
+WARNING: The behavior of this command has been altered by the following extension: containerapp
+Server                      Identity                                                                                                                                            PasswordSecretRef
+--------------------------  --------------------------------------------------------------------------------------------------------------------------------------------------  -------------------
+cr65rettnevfyzo.azurecr.io  /subscriptions/e129e314-4dd4-4814-a559-14a2c569bf86/resourcegroups/rg-dev/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-quotes-bff
+
+--- 9. no secret in the repository -------------------------
+no matches
+tracked files under .azure:
+(empty above means the azd environment is untracked)
+deployed credentials file tracked?
+(empty above means it is gitignored)
+
+==============================================================
+ written to /c/ThinkSchool/ThinkSchool_Khushi_Jain/day17_swa_deploy/verification.log
+==============================================================

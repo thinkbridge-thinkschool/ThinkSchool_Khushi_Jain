@@ -9,8 +9,6 @@ import { routes } from './routes';
 import { refreshInterceptor } from './session';
 import { SignalsPageComponent } from './signals-page';
 
-// Bodies as the running API returns them, carried over from Day 15's
-// characterization in api-contract.spec.ts.
 const PAGE = {
   page: 1,
   size: 5,
@@ -51,10 +49,6 @@ function setup() {
   };
 }
 
-// The guard reads SessionStore, which reads TokenStore. Signing in for a test
-// means putting a token where the real sign-in would have put it. The app's own
-// automatic sign-in does not run here, so the signed-out cases are reachable --
-// which they are not in the browser.
 function signIn(tokens: TokenStore) {
   tokens.token.set('a-test-access-token');
 }
@@ -70,8 +64,6 @@ describe('the Day 16 route table', () => {
     const list = children.find((route) => route.path === '');
 
     expect(detail?.loadComponent).toBeDefined();
-    // A `component` here would mean the class was imported statically, which is
-    // exactly the mistake the lazy chunk is meant to avoid.
     expect(detail?.component).toBeUndefined();
     expect(list?.component).toBeDefined();
   });
@@ -87,18 +79,24 @@ describe('the Day 16 route table', () => {
     expect(routes.find((route) => route.path === 'login')?.canActivate).toBeUndefined();
   });
 
+  it('guards every page that is not the login page', () => {
+    const open = routes
+      .filter((route) => route.component !== undefined || route.children !== undefined)
+      .filter((route) => route.canActivate === undefined)
+      .map((route) => route.path);
+
+    expect(open).toEqual(['login']);
+  });
+
   it('does not collide with the paths the earlier pieces already own', () => {
     const paths = routes.map((route) => route.path);
 
     expect(new Set(paths).size).toBe(paths.length);
-    // The Quotes tab is Day 13 piece 1 and keeps /quotes, which is why the
-    // Day 16 pair lives under /routing. Compared by identity, not by class
-    // name -- a production build renames the class.
     expect(routes.find((route) => route.path === 'quotes')?.component).toBe(SignalsPageComponent);
   });
 });
 
-describe('authGuard on the routed pair', () => {
+describe('authGuard', () => {
   it('sends a signed-out visitor to /login with the route they wanted', async () => {
     const { router, backend } = setup();
 
@@ -108,7 +106,15 @@ describe('authGuard on the routed pair', () => {
     backend.expectNone(() => true);
   });
 
-  it('lets a signed-in visitor through to the detail route', async () => {
+  it('guards the Quotes tab as well', async () => {
+    const { router } = setup();
+
+    await router.navigateByUrl('/quotes');
+
+    expect(router.url).toBe('/login?returnUrl=%2Fquotes');
+  });
+
+  it('lets a signed-in visitor through', async () => {
     const { router, tokens } = setup();
     signIn(tokens);
 
@@ -116,22 +122,6 @@ describe('authGuard on the routed pair', () => {
 
     expect(activated).toBe(true);
     expect(router.url).toBe('/routing/42');
-  });
-
-  it('guards the routed list as well as the routed detail', async () => {
-    const { router } = setup();
-
-    await router.navigateByUrl('/routing');
-
-    expect(router.url).toBe('/login?returnUrl=%2Frouting');
-  });
-
-  it('leaves the unguarded Quotes tab reachable when signed out', async () => {
-    const { router } = setup();
-
-    await router.navigateByUrl('/quotes');
-
-    expect(router.url).toBe('/quotes');
   });
 });
 
@@ -181,7 +171,6 @@ describe('the routed detail page', () => {
     signIn(tokens);
 
     const harness = await RouterTestingHarness.create('/routing/999999');
-    // The API answers a missing quote with a 404 and a zero-length body.
     backend.expectOne('/api/quotes/999999').flush(null, { status: 404, statusText: 'Not Found' });
     harness.detectChanges();
 

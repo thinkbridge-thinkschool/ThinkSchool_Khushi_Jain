@@ -1,0 +1,9 @@
+{
+  "name": "quotes-bff",
+  "version": "1.0.0",
+  "private": true,
+  "main": "server.js",
+  "dependencies": {
+    "@azure/identity": "^4.5.0"
+  }
+}

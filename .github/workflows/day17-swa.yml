@@ -1,0 +1,88 @@
+name: Deploy SWA
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "demo-app/**"
+      - "day17_swa_deploy/**"
+      - ".github/workflows/day17-swa.yml"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Load deployment settings
+        run: |
+          set -a
+          . day17_swa_deploy/deploy.env
+          set +a
+          {
+            echo "AZURE_RESOURCE_GROUP=$AZURE_RESOURCE_GROUP"
+            echo "SWA_NAME=$SWA_NAME"
+            echo "SWA_HOST=${SWA_CUSTOM_DOMAIN:-$SWA_DEFAULT_HOSTNAME}"
+            echo "QUOTES_BFF_CONTAINER_APP=$QUOTES_BFF_CONTAINER_APP"
+          } >> "$GITHUB_ENV"
+
+      - name: Build the Angular app
+        working-directory: demo-app
+        run: |
+          npm ci
+          npx ng build --configuration production
+
+      - name: Sign in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push the managed-identity backend
+        run: |
+          registry=$(az acr list -g "$AZURE_RESOURCE_GROUP" --query "[0].loginServer" -o tsv)
+          tag="${registry}/quotes-bff:${GITHUB_SHA::7}"
+          az acr login --name "${registry%%.*}"
+          docker build -t "$tag" day17_swa_deploy/bff
+          docker push "$tag"
+          az containerapp update -g "$AZURE_RESOURCE_GROUP" -n "$QUOTES_BFF_CONTAINER_APP" --image "$tag" -o none
+
+      - name: Read the Static Web Apps deployment token
+        id: swa-token
+        run: |
+          token=$(az staticwebapp secrets list --name "$SWA_NAME" --resource-group "$AZURE_RESOURCE_GROUP" --query "properties.apiKey" -o tsv)
+          echo "::add-mask::$token"
+          echo "token=$token" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy the site
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ steps.swa-token.outputs.token }}
+          action: upload
+          skip_app_build: true
+          skip_api_build: true
+          app_location: demo-app/dist/demo-app/browser
+          api_location: ""
+          output_location: ""
+
+      - name: Lighthouse
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          urls: https://${{ env.SWA_HOST }}
+          configPath: day17_swa_deploy/lighthouserc.json
+          uploadArtifacts: true
+          temporaryPublicStorage: true
