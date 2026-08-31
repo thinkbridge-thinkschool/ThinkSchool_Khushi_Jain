@@ -5,4 +5,5 @@
   <Project Path="RefactorOrders/RefactorOrders.csproj" />
   <Project Path="RefactorOrders/RefactorOrders.Tests/RefactorOrders.Tests.csproj" />
   <Project Path="hello-cs/hello-cs.csproj" />
+  <Project Path="day18_background_jobs/day18_background_jobs.csproj" />
 </Solution>
