@@ -32,8 +32,10 @@ The endpoints the deployed pages use:
 `ValidationProblemDetails` keyed `page/size`. Pass those two query parameters through untouched and
 let the API validate them.
 
-Proxy those four and nothing else. `POST /api/quotes`, `DELETE /api/quotes/{id}` and
-`/api/collections` must not be reachable through the proxy.
+The pages that write also need `POST /api/quotes`, `DELETE /api/quotes/{id}` and the four
+`/api/collections` routes. Those must forward the signed-in user's own bearer token, never the
+managed-identity one — writes need the `quotes.write` scope, which only a delegated token carries.
+Nothing outside that list may reach the API through the proxy.
 
 ## Auth
 

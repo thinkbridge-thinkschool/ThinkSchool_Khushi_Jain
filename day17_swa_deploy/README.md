@@ -26,11 +26,19 @@ Static Web Apps proxies `/api/*` to the linked container app, so the call is sam
 Angular code did not change: `API_BASE_URL` stays empty, exactly as it is in development behind the
 dev-server proxy.
 
-The backend is [bff/server.js](bff/server.js). It asks the platform for a token for
-`api://467f0295-…/.default` and attaches it. It forwards only `GET /api/quotes`,
-`GET /api/quotes/{id}` and `POST /api/auth/{register,login,refresh,logout}` — anything else is refused there
-rather than passed on, so it cannot be used as an open relay. Sign-in is forwarded without the
-managed-identity token, because that is the user's own credential flow.
+The backend is [bff/server.js](bff/server.js). It holds one route table, and each route declares
+which credential it travels on:
+
+| Routes | Credential |
+|---|---|
+| `GET /api/quotes`, `GET /api/quotes/{id}` | The managed identity |
+| `POST`/`DELETE /api/quotes`, the four `/api/collections` routes | The caller's own bearer token |
+| `POST /api/auth/{register,login,refresh,logout}` | None |
+
+Anything not in that table is refused at the proxy, so it cannot be used as an open relay. The split
+matters: writes need the `quotes.write` scope, which only a delegated user token carries, so
+forwarding the managed-identity token there would fail with 403 no matter what the identity is
+granted. The response header `x-managed-identity-token` names which credential was used.
 
 ## Where the secrets aren't
 

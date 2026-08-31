@@ -8,16 +8,29 @@ const introspectionEnabled = (process.env.TOKEN_INTROSPECTION_ENABLED ?? '').toL
 
 const credential = new DefaultAzureCredential();
 
-const AUTH_ACTIONS = new Set(['register', 'login', 'refresh', 'logout']);
+const MANAGED_IDENTITY = 'managed-identity';
+const CALLER = 'caller';
+const NONE = 'none';
+
+const ROUTES = [
+  { method: 'GET', pattern: /^\/api\/quotes$/, auth: MANAGED_IDENTITY },
+  { method: 'GET', pattern: /^\/api\/quotes\/\d+$/, auth: MANAGED_IDENTITY },
+  { method: 'POST', pattern: /^\/api\/quotes$/, auth: CALLER },
+  { method: 'DELETE', pattern: /^\/api\/quotes\/\d+$/, auth: CALLER },
+  { method: 'POST', pattern: /^\/api\/collections$/, auth: CALLER },
+  { method: 'GET', pattern: /^\/api\/collections\/\d+$/, auth: CALLER },
+  { method: 'POST', pattern: /^\/api\/collections\/\d+\/items$/, auth: CALLER },
+  { method: 'DELETE', pattern: /^\/api\/collections\/\d+\/items\/\d+$/, auth: CALLER },
+  { method: 'POST', pattern: /^\/api\/auth\/(register|login|refresh|logout)$/, auth: NONE },
+];
 
 function send(res, status, body, headers = {}) {
-  const payload = typeof body === 'string' ? body : JSON.stringify(body);
   res.writeHead(status, {
     'Content-Type': 'application/json',
     'Cache-Control': 'no-store',
     ...headers,
   });
-  res.end(payload);
+  res.end(typeof body === 'string' ? body : JSON.stringify(body));
 }
 
 function problem(res, status, detail) {
@@ -49,7 +62,7 @@ function readBody(req) {
   });
 }
 
-async function relay(req, res, path, search, token, body) {
+async function relay(req, res, path, search, authorization, label, body) {
   const target = new URL(path + search, apiBaseUrl);
   const headers = { Accept: 'application/json' };
 
@@ -57,8 +70,8 @@ async function relay(req, res, path, search, token, body) {
     headers['Content-Type'] = 'application/json';
   }
 
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
+  if (authorization) {
+    headers.Authorization = authorization;
   }
 
   let upstream;
@@ -73,14 +86,11 @@ async function relay(req, res, path, search, token, body) {
 
   const text = await upstream.text();
 
-  console.log(
-    `${req.method} ${target.pathname}${target.search} -> ${upstream.status} ` +
-      `(managed-identity token ${token ? 'attached' : 'not attached'})`,
-  );
+  console.log(`${req.method} ${target.pathname}${target.search} -> ${upstream.status} (${label})`);
 
   send(res, upstream.status, text, {
     'Content-Type': upstream.headers.get('content-type') ?? 'application/json',
-    'x-managed-identity-token': token ? 'attached' : 'unavailable',
+    'x-managed-identity-token': label,
   });
 }
 
@@ -149,17 +159,33 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
-  if (req.method === 'GET' && (path === '/api/quotes' || /^\/api\/quotes\/\d+$/.test(path))) {
-    return relay(req, res, path, url.search, await accessToken(), undefined);
+  const route = ROUTES.find((r) => r.method === req.method && r.pattern.test(path));
+
+  if (!route) {
+    return problem(res, 404, 'That was not found.');
   }
 
-  const authMatch = /^\/api\/auth\/([a-z]+)$/.exec(path);
+  const body = req.method === 'GET' || req.method === 'HEAD' ? undefined : await readBody(req);
 
-  if (req.method === 'POST' && authMatch && AUTH_ACTIONS.has(authMatch[1])) {
-    return relay(req, res, path, '', null, await readBody(req));
+  if (route.auth === MANAGED_IDENTITY) {
+    const token = await accessToken();
+
+    return relay(
+      req,
+      res,
+      path,
+      url.search,
+      token ? `Bearer ${token}` : null,
+      token ? 'attached' : 'unavailable',
+      body,
+    );
   }
 
-  return problem(res, 404, 'That was not found.');
+  if (route.auth === CALLER) {
+    return relay(req, res, path, url.search, req.headers.authorization ?? null, 'caller-token', body);
+  }
+
+  return relay(req, res, path, url.search, null, 'none', body);
 });
 
 server.listen(port, () => console.log(`quotes-bff listening on ${port}`));
