@@ -219,6 +219,69 @@ Angular projects rather than one growing app, so piece 1 stays exactly as submit
 `POST /api/quotes` requires a bearer token (`quotes.write` scope), so the form has a plain
 dev-only token field alongside the real Author/Text fields.
 
+### Day 15 — HttpClient and functional interceptors
+
+| Task | Where |
+|---|---|
+| The brief, the verification log, and the bugs I made the agent fix | `day15_http_interceptors/README.md` |
+| Characterization test pinning the real API contract | `day15_http_interceptors/src/api-contract.spec.ts` |
+| Auth header, retry with backoff on idempotent GETs, `ProblemDetails` mapped to a typed error | `day15_http_interceptors/src/http.ts`, `http.spec.ts` |
+| The same interceptors against the deployed API | `day15_http_interceptors/src/live-api.spec.ts` |
+
+The first day directed at an agent rather than hand-written. The characterization test was green
+before any UI existed, so the interceptors were built against a pinned contract instead of an
+assumed one.
+
+### Day 16 — routing and signal state
+
+Two pieces, both in `demo-app/`, since each builds on the app the previous one left behind.
+
+| Task | Where |
+|---|---|
+| Lazy routes, a functional auth guard, route params, and a View Transition | `demo-app/DAY16-routing.md` — `src/routes.ts`, `src/routed-list-page.ts`, `src/routed-detail-page.ts`, `src/session.ts`, `src/routing.spec.ts` |
+| A feature's state modelled with signals, and the rule for when I would move to NgRx | `demo-app/DAY16-piece2-state.md` — `src/collection-store.ts`, `src/collections-api.ts`, `src/collection-page.ts`, `src/collection-store.spec.ts` |
+
+The guard is Day 15's `session.ts` unchanged. Both write-ups carry the brief, the verification log,
+and the bug I caught in the agent's diff.
+
+### Day 17 — deploy to Azure Static Web Apps
+
+| Task | Where |
+|---|---|
+| The brief | `day17_swa_deploy/BRIEF.md` |
+| Static Web App and the identity-holding backend | `day17_swa_deploy/infra/swa.bicep`, `bff/server.js` |
+| Live URL, Lighthouse score, and the managed-identity token | `day17_swa_deploy/verify.sh`, `verification.log`, `lighthouse.json` |
+| What I made it fix, and what breaks if the API changes | `day17_swa_deploy/README.md` |
+
+An Angular app in a browser cannot hold a managed identity, so a small Container App sits between
+the site and the API and holds one on its behalf. Deployed to
+`https://proud-sky-0fa504d0f.7.azurestaticapps.net`, recorded in `verification.log`.
+
+### Day 18 — background jobs
+
+| Task | Where |
+|---|---|
+| A `BackgroundService` draining a bounded queue, shutting down without tearing work in half | `day18_background_jobs/Program.cs`, `README.md` |
+
+The stopping token means "stop taking new work", not "abandon what you are doing", so an item that
+has already started always finishes. What is still queued drains on a budget and the remainder is
+reported rather than dropped silently.
+
+### Day 19 — Service Bus topics and the dead-letter queue
+
+| Task | Where |
+|---|---|
+| Publisher, competing consumers, idempotency, and the dead-letter read-back | `day19_service_bus/Program.cs` |
+| The namespace, topic and two subscriptions | `day19_service_bus/azure-setup.sh` |
+| The run output, as the proof | `day19_service_bus/README.md` |
+
+Runs against a real Standard-tier namespace, created and deleted around each run — topics are not
+available on the Basic tier, and Standard bills by the hour whether or not anything is sent.
+
+The dedupe key is the subscription as well as the message id. A topic hands the same id to every
+subscription, so keying on the id alone lets whichever subscription arrives first silently stop the
+others from running.
+
 ## Tests
 
 ```bash
