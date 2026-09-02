@@ -282,6 +282,18 @@ The dedupe key is the subscription as well as the message id. A topic hands the 
 subscription, so keying on the id alone lets whichever subscription arrives first silently stop the
 others from running.
 
+### Day 20 — the transactional outbox
+
+| Task | Where |
+|---|---|
+| The outbox table, the one transaction, the relay and the idempotent consumer | `day20_outbox/Program.cs` |
+| The Basic-tier namespace and the queue | `day20_outbox/azure-setup.sh` |
+| The crash I tested and why nothing is lost | `day20_outbox/README.md` |
+
+`crash` kills the process between the publish and the "mark sent" save, and `resume` is a second
+process against the same SQLite file. The row is still unsent, so it publishes again — delivery is
+at-least-once and the consumer's primary key on the message id is what keeps the effect single.
+
 ## Tests
 
 ```bash

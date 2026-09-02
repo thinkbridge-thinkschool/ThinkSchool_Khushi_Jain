@@ -7,4 +7,5 @@
   <Project Path="hello-cs/hello-cs.csproj" />
   <Project Path="day18_background_jobs/day18_background_jobs.csproj" />
   <Project Path="day19_service_bus/day19_service_bus.csproj" />
+  <Project Path="day20_outbox/day20_outbox.csproj" />
 </Solution>
