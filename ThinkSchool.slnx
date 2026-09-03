@@ -8,4 +8,5 @@
   <Project Path="day18_background_jobs/day18_background_jobs.csproj" />
   <Project Path="day19_service_bus/day19_service_bus.csproj" />
   <Project Path="day20_outbox/day20_outbox.csproj" />
+  <Project Path="day21_hybrid_cache/day21_hybrid_cache.csproj" />
 </Solution>

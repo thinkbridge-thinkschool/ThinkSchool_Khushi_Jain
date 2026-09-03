@@ -294,6 +294,22 @@ others from running.
 process against the same SQLite file. The row is still unsent, so it publishes again — delivery is
 at-least-once and the consumer's primary key on the message id is what keeps the effect single.
 
+### Day 21 — HybridCache and the stampede
+
+| Task | Where |
+|---|---|
+| The cache wiring, the load phases and the stampede phases | `day21_hybrid_cache/Program.cs` |
+| The Basic-tier Azure Cache for Redis | `day21_hybrid_cache/azure-setup.sh` |
+| The before and after numbers | `day21_hybrid_cache/README.md` |
+
+The same hot read is measured three ways — no cache, a hand-written read-through, and `HybridCache`
+over an in-memory tier and Redis. Database reads are counted by an EF Core command interceptor, which
+also gives each read 25 ms so that a local SQLite file behaves like a database across a network.
+
+A naive read-through has nothing between its get and its set, so a cold key fans out one database
+read per caller in flight. `HybridCache` runs the loader once and hands the result to the rest: 100
+readers on one cold key cost 100 database reads through the naive path and 1 through `HybridCache`.
+
 ## Tests
 
 ```bash
