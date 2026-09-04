@@ -9,4 +9,5 @@
   <Project Path="day19_service_bus/day19_service_bus.csproj" />
   <Project Path="day20_outbox/day20_outbox.csproj" />
   <Project Path="day21_hybrid_cache/day21_hybrid_cache.csproj" />
+  <Project Path="day22_polly/day22_polly.csproj" />
 </Solution>
