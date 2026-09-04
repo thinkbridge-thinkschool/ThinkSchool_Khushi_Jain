@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\DocBook.SharedKernel\DocBook.SharedKernel.csproj" />
+  </ItemGroup>
+
+</Project>

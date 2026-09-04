@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\DocBook.SharedKernel\DocBook.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\Scheduling\DocBook.Scheduling.Contracts\DocBook.Scheduling.Contracts.csproj" />
+    <ProjectReference Include="..\..\Patients\DocBook.Patients.Contracts\DocBook.Patients.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>

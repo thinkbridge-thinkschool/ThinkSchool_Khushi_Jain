@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\DocBook.Patients.Domain\DocBook.Patients.Domain.csproj" />
+    <ProjectReference Include="..\DocBook.Patients.Contracts\DocBook.Patients.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>

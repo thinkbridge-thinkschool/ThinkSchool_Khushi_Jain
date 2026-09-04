@@ -1,0 +1,16 @@
+<Solution>
+  <Project Path="src/DocBook.SharedKernel/DocBook.SharedKernel.csproj" />
+  <Project Path="src/DocBook.Infrastructure/DocBook.Infrastructure.csproj" />
+  <Project Path="src/Modules/Scheduling/DocBook.Scheduling.Contracts/DocBook.Scheduling.Contracts.csproj" />
+  <Project Path="src/Modules/Scheduling/DocBook.Scheduling.Domain/DocBook.Scheduling.Domain.csproj" />
+  <Project Path="src/Modules/Scheduling/DocBook.Scheduling.Application/DocBook.Scheduling.Application.csproj" />
+  <Project Path="src/Modules/Scheduling/DocBook.Scheduling.Infrastructure/DocBook.Scheduling.Infrastructure.csproj" />
+  <Project Path="src/Modules/Patients/DocBook.Patients.Contracts/DocBook.Patients.Contracts.csproj" />
+  <Project Path="src/Modules/Patients/DocBook.Patients.Domain/DocBook.Patients.Domain.csproj" />
+  <Project Path="src/Modules/Patients/DocBook.Patients.Application/DocBook.Patients.Application.csproj" />
+  <Project Path="src/Modules/Patients/DocBook.Patients.Infrastructure/DocBook.Patients.Infrastructure.csproj" />
+  <Project Path="src/Modules/Notifications/DocBook.Notifications.Application/DocBook.Notifications.Application.csproj" />
+  <Project Path="src/Modules/Notifications/DocBook.Notifications.Infrastructure/DocBook.Notifications.Infrastructure.csproj" />
+  <Project Path="src/DocBook.Api/DocBook.Api.csproj" />
+  <Project Path="tests/DocBook.Scheduling.Domain.Tests/DocBook.Scheduling.Domain.Tests.csproj" />
+</Solution>
