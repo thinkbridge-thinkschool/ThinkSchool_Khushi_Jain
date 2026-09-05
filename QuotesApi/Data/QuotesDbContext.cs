@@ -11,6 +11,7 @@ public class QuotesDbContext(DbContextOptions<QuotesDbContext> options)
     public DbSet<User> Users => Set<User>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Collection> Collections => Set<Collection>();
+    public DbSet<OutboxMessage> Outbox => Set<OutboxMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -36,6 +37,19 @@ public class QuotesDbContext(DbContextOptions<QuotesDbContext> options)
                 item.Property<int>("Id");
                 item.HasKey("Id");
             });
+        });
+
+        modelBuilder.Entity<OutboxMessage>(outbox =>
+        {
+            outbox.ToTable("Outbox");
+
+            // The id a consumer dedupes on, so a duplicate cannot be written on this side either.
+            outbox.HasIndex(message => message.MessageId).IsUnique();
+
+            // The relay only ever asks for unsent rows, so the index covers only those.
+            outbox.HasIndex(message => message.Id)
+                .HasFilter("ProcessedAt IS NULL")
+                .HasDatabaseName("IX_Outbox_Unsent");
         });
     }
 }

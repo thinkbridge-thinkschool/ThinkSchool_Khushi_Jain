@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using QuotesApi.Data;
+using QuotesApi.Messaging;
 using QuotesApi.Repositories;
 
 namespace QuotesApi.Tests;
@@ -23,7 +24,7 @@ public class QuoteRepositoryTests : IDisposable
         _db = new QuotesDbContext(options);
         _db.Database.EnsureCreated();
 
-        _repository = new QuoteRepository(_db);
+        _repository = new QuoteRepository(_db, new FakeClock(), new OutboxSignal());
     }
 
     [Fact]

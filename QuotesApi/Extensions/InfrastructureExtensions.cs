@@ -10,6 +10,7 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using QuotesApi.Authorization;
 using QuotesApi.Data;
+using QuotesApi.Messaging;
 using QuotesApi.Models;
 using QuotesApi.Repositories;
 using QuotesApi.Resilience;
@@ -31,6 +32,7 @@ public static class InfrastructureExtensions
         builder.AddApiOptions();
         builder.AddApiAuthentication();
         builder.AddPersistence();
+        builder.AddMessaging();
 
         return builder;
     }
@@ -269,5 +271,32 @@ public static class InfrastructureExtensions
 
         builder.Services.AddScoped<AddQuoteToCollectionHandler>();
         builder.Services.AddScoped<CollectionDetailsQuery>();
+    }
+
+    /// <summary>
+    /// The outbox is always written; only the relay that drains it is optional.
+    /// A row is durable either way, so switching the relay off delays delivery
+    /// rather than losing it.
+    /// </summary>
+    private static void AddMessaging(this WebApplicationBuilder builder)
+    {
+        var outboxSection = builder.Configuration.GetSection("Outbox");
+
+        builder.Services.Configure<OutboxOptions>(outboxSection);
+
+        // Singleton: the write path and the relay have to share one instance
+        // for a signal raised by the first to reach the second.
+        builder.Services.AddSingleton<OutboxSignal>();
+
+        // Singleton: stateless, and the broker-backed publisher that replaces it
+        // will hold a connection that is meant to be shared.
+        builder.Services.AddSingleton<IIntegrationEventPublisher, LoggingIntegrationEventPublisher>();
+
+        var outboxOptions = outboxSection.Get<OutboxOptions>() ?? new OutboxOptions();
+
+        if (outboxOptions.Enabled)
+        {
+            builder.Services.AddHostedService<OutboxRelay>();
+        }
     }
 }

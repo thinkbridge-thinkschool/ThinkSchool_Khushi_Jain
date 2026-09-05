@@ -21,6 +21,10 @@ internal static class TestConfiguration
         builder.UseSetting("Seed:AdminEmail", SeedAdminEmail);
         builder.UseSetting("Seed:AdminPassword", SeedAdminPassword);
 
+        // Outbox rows are still written and can still be asserted on; only the
+        // relay that would drain them in the background is left unstarted.
+        builder.UseSetting("Outbox:Enabled", "false");
+
         return builder;
     }
 }
