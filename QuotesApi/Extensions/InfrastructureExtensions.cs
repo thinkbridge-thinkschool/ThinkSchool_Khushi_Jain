@@ -288,9 +288,23 @@ public static class InfrastructureExtensions
         // for a signal raised by the first to reach the second.
         builder.Services.AddSingleton<OutboxSignal>();
 
-        // Singleton: stateless, and the broker-backed publisher that replaces it
-        // will hold a connection that is meant to be shared.
-        builder.Services.AddSingleton<IIntegrationEventPublisher, LoggingIntegrationEventPublisher>();
+        var serviceBusSection = builder.Configuration.GetSection("ServiceBus");
+
+        builder.Services.Configure<ServiceBusOptions>(serviceBusSection);
+
+        var serviceBusOptions = serviceBusSection.Get<ServiceBusOptions>() ?? new ServiceBusOptions();
+
+        // Singleton either way: the broker-backed publisher holds a connection
+        // that is meant to be shared, and the logging one has no state at all.
+        if (serviceBusOptions.IsConfigured)
+        {
+            builder.Services.AddSingleton<IIntegrationEventPublisher, ServiceBusPublisher>();
+            builder.Services.AddHostedService<QuoteEventsConsumer>();
+        }
+        else
+        {
+            builder.Services.AddSingleton<IIntegrationEventPublisher, LoggingIntegrationEventPublisher>();
+        }
 
         var outboxOptions = outboxSection.Get<OutboxOptions>() ?? new OutboxOptions();
 

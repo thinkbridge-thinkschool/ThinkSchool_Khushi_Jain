@@ -85,6 +85,27 @@ namespace QuotesApi.Tests.SqlServer.Migrations
                     b.ToTable("Outbox", (string)null);
                 });
 
+            modelBuilder.Entity("QuotesApi.Models.ProcessedMessage", b =>
+                {
+                    b.Property<string>("Subscription")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("MessageId")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTimeOffset>("HandledAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("QuoteId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Subscription", "MessageId");
+
+                    b.ToTable("ProcessedMessages");
+                });
+
             modelBuilder.Entity("QuotesApi.Models.Quote", b =>
                 {
                     b.Property<int>("Id")

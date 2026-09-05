@@ -12,6 +12,7 @@ public class QuotesDbContext(DbContextOptions<QuotesDbContext> options)
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Collection> Collections => Set<Collection>();
     public DbSet<OutboxMessage> Outbox => Set<OutboxMessage>();
+    public DbSet<ProcessedMessage> ProcessedMessages => Set<ProcessedMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -50,6 +51,20 @@ public class QuotesDbContext(DbContextOptions<QuotesDbContext> options)
             outbox.HasIndex(message => message.Id)
                 .HasFilter("ProcessedAt IS NULL")
                 .HasDatabaseName("IX_Outbox_Unsent");
+        });
+
+        modelBuilder.Entity<ProcessedMessage>(processed =>
+        {
+            // The composite key is the idempotency guarantee itself: a second
+            // delivery collides with it rather than doing the work again.
+            processed.HasKey(message => new { message.Subscription, message.MessageId });
+
+            // Both are lengthed because a key column cannot be nvarchar(max).
+            processed.Property(message => message.Subscription)
+                .HasMaxLength(ProcessedMessage.MaximumSubscriptionLength);
+
+            processed.Property(message => message.MessageId)
+                .HasMaxLength(ProcessedMessage.MaximumMessageIdLength);
         });
     }
 }
