@@ -5,6 +5,7 @@ using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.IdentityModel.Tokens;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -32,9 +33,40 @@ public static class InfrastructureExtensions
         builder.AddApiOptions();
         builder.AddApiAuthentication();
         builder.AddPersistence();
+        builder.AddCaching();
         builder.AddMessaging();
 
         return builder;
+    }
+
+    /// <summary>
+    /// HybridCache always runs; Redis behind it is optional. With no Redis the
+    /// in-memory tier still de-duplicates concurrent readers of a cold key,
+    /// which is the stampede protection -- what Redis adds is sharing the
+    /// result across instances and across restarts.
+    /// </summary>
+    private static void AddCaching(this WebApplicationBuilder builder)
+    {
+        var cacheSection = builder.Configuration.GetSection("Cache");
+
+        builder.Services.Configure<CacheOptions>(cacheSection);
+
+        var cacheOptions = cacheSection.Get<CacheOptions>() ?? new CacheOptions();
+
+        // Registering any IDistributedCache is the whole of the L2 wiring:
+        // HybridCache finds it and uses it as its second tier.
+        if (cacheOptions.HasRedis)
+        {
+            builder.Services.AddStackExchangeRedisCache(options =>
+                options.Configuration = cacheOptions.RedisConnectionString);
+        }
+
+        builder.Services.AddHybridCache(options =>
+            options.DefaultEntryOptions = new HybridCacheEntryOptions
+            {
+                Expiration = cacheOptions.Expiration,
+                LocalCacheExpiration = cacheOptions.LocalExpiration
+            });
     }
 
     /// <summary>
@@ -271,6 +303,7 @@ public static class InfrastructureExtensions
 
         builder.Services.AddScoped<AddQuoteToCollectionHandler>();
         builder.Services.AddScoped<CollectionDetailsQuery>();
+        builder.Services.AddScoped<QuoteDetailsQuery>();
     }
 
     /// <summary>

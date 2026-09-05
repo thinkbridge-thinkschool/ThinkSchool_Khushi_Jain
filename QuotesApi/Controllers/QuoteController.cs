@@ -7,6 +7,7 @@ using QuotesApi.Contracts;
 using QuotesApi.Data;
 using QuotesApi.Models;
 using QuotesApi.Repositories;
+using QuotesApi.Services;
 
 namespace QuotesApi.Controllers;
 
@@ -98,12 +99,14 @@ public static class QuoteController
             return Results.Ok(byAuthor);
         });
 
+        // The hot read: served from HybridCache, which collapses a burst of
+        // concurrent readers of one cold id into a single database read.
         group.MapGet("/{id:int}", async (
             int id,
-            IQuoteRepository repository,
+            QuoteDetailsQuery query,
             CancellationToken cancellationToken) =>
         {
-            var quote = await repository.GetByIdAsync(id, cancellationToken);
+            var quote = await query.RunAsync(id, cancellationToken);
 
             return quote is null
                 ? Results.NotFound()
@@ -154,6 +157,7 @@ public static class QuoteController
             int id,
             ClaimsPrincipal user,
             IQuoteRepository repository,
+            QuoteDetailsQuery query,
             IAuthorizationService authorizationService,
             ILogger<Program> logger,
             CancellationToken cancellationToken) =>
@@ -176,6 +180,10 @@ public static class QuoteController
             }
 
             await repository.DeleteAsync(id, cancellationToken);
+
+            // After the delete, or a reader could refill the entry from a row
+            // that is about to be soft-deleted and serve it until it expires.
+            await query.InvalidateAsync(id, cancellationToken);
 
             logger.LogInformation("Deleted quote {QuoteId}", id);
 
