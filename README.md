@@ -41,7 +41,7 @@ reads its secrets from Key Vault.
 
 | Path | What it is |
 |---|---|
-| `QuotesApi/` | The API — quotes, collections, auth, telemetry |
+| `QuotesApi/` | The API — quotes, collections, auth, messaging, caching, telemetry |
 | `QuotesApi.Tests/` | Unit and integration tests, including a real SQL Server suite via Testcontainers |
 | `Tests.Domain/` | Aggregate invariant tests. No database, no host, no fixtures |
 | `RefactorOrders/` | The god-method refactor exercise. `Original/OrderController.cs` is kept for comparison |
@@ -55,6 +55,20 @@ Write-ups live beside the code they describe: `RefactorOrders/REFACTOR_NOTES.md`
 Both `Controllers/` folders use different mechanisms: `QuotesApi/Controllers/` holds minimal-API route
 registrations exposed as `Map…Endpoints()` extensions, while `RefactorOrders/Controllers/` is a real
 `[ApiController]` deriving from `ControllerBase`.
+
+## Creating a quote
+
+`POST /api/quotes` writes the quote and a `QuoteCreated` outbox row in one transaction, so the
+database and the broker cannot disagree about whether a quote exists. A background relay publishes
+each unsent row to a Service Bus topic and marks it sent afterwards — publishing first, so a process
+that dies between the two republishes rather than loses. Two subscriptions consume it, and each keeps
+its own record of what it has handled, keyed on the subscription and the message id.
+
+`GET /api/quotes/{id}` is served through HybridCache, in memory and in Redis when one is configured.
+A burst of concurrent readers of one uncached id costs a single database read.
+
+The broker and Redis are both optional. With neither configured the API logs its events and caches in
+memory alone.
 
 ## Day wise task
 
@@ -262,6 +276,7 @@ the site and the API and holds one on its behalf. Deployed to
 | Task | Where |
 |---|---|
 | A `BackgroundService` draining a bounded queue, shutting down without tearing work in half | `day18_background_jobs/Program.cs`, `README.md` |
+| The relay that drains the outbox, on the same shutdown rule | `Messaging/OutboxRelay.cs`, `Messaging/OutboxSignal.cs` |
 
 The stopping token means "stop taking new work", not "abandon what you are doing", so an item that
 has already started always finishes. What is still queued drains on a budget and the remainder is
@@ -274,6 +289,8 @@ reported rather than dropped silently.
 | Publisher, competing consumers, idempotency, and the dead-letter read-back | `day19_service_bus/Program.cs` |
 | The namespace, topic and two subscriptions | `day19_service_bus/azure-setup.sh` |
 | The run output, as the proof | `day19_service_bus/README.md` |
+| Publisher, consumers and the record each subscription keeps | `Messaging/ServiceBusPublisher.cs`, `Messaging/QuoteEventsConsumer.cs`, `Models/ProcessedMessage.cs` |
+| The namespace the API publishes to | `servicebus-setup.sh` |
 
 Runs against a real Standard-tier namespace, created and deleted around each run — topics are not
 available on the Basic tier, and Standard bills by the hour whether or not anything is sent.
@@ -289,6 +306,7 @@ others from running.
 | The outbox table, the one transaction, the relay and the idempotent consumer | `day20_outbox/Program.cs` |
 | The Basic-tier namespace and the queue | `day20_outbox/azure-setup.sh` |
 | The crash I tested and why nothing is lost | `day20_outbox/README.md` |
+| The outbox table and the transaction that writes it | `Models/OutboxMessage.cs`, `Repositories/QuoteRepository.cs` |
 
 `crash` kills the process between the publish and the "mark sent" save, and `resume` is a second
 process against the same SQLite file. The row is still unsent, so it publishes again — delivery is
@@ -301,6 +319,7 @@ at-least-once and the consumer's primary key on the message id is what keeps the
 | The cache wiring, the load phases and the stampede phases | `day21_hybrid_cache/Program.cs` |
 | The Basic-tier Azure Cache for Redis | `day21_hybrid_cache/azure-setup.sh` |
 | The before and after numbers | `day21_hybrid_cache/README.md` |
+| The cached read and its invalidation | `Services/QuoteDetailsQuery.cs`, `Models/CacheOptions.cs` |
 
 The same hot read is measured three ways — no cache, a hand-written read-through, and `HybridCache`
 over an in-memory tier and Redis. Database reads are counted by an EF Core command interceptor, which
@@ -309,6 +328,21 @@ also gives each read 25 ms so that a local SQLite file behaves like a database a
 A naive read-through has nothing between its get and its set, so a cold key fans out one database
 read per caller in flight. `HybridCache` runs the loader once and hands the result to the rest: 100
 readers on one cold key cost 100 database reads through the naive path and 1 through `HybridCache`.
+
+### Day 22 — resilience
+
+| Task | Where |
+|---|---|
+| Retry, breaker, timeout and bulkhead against a dependency that can be made to fail on command | `day22_polly/Program.cs`, `README.md` |
+| The pipeline the API's outbound calls run through | `Resilience/EntraHttpClientExtensions.cs` |
+
+The order is the design: bulkhead, total timeout, retry, circuit breaker, attempt timeout, outermost
+first. A call the process has no capacity for is refused before it costs anything, the total timeout
+bounds the whole call including its backoff, and the innermost timeout bounds one attempt rather than
+the entire retry loop.
+
+Entra discovery is the only outbound HTTP call the API makes. Service Bus is not covered by the
+pipeline, since its SDK speaks AMQP and carries a retry policy of its own.
 
 ## Tests
 
@@ -330,6 +364,9 @@ Typed sections bind through the options pattern and are injected as `IOptions<T>
 
 Secrets never live in `appsettings.json` — user secrets locally, Key Vault in Azure.
 
+`ServiceBus:ConnectionString` and `Cache:RedisConnectionString` are absent by default. Supplying
+either switches on the broker or the second cache tier; without them the API runs on its own.
+
 ## Deployment
 
 ```bash
@@ -349,4 +386,8 @@ Function App that holds a managed identity on its behalf. See `day17_swa_deploy/
 - **The deployed database is not durable.** SQLite writes to the container's own filesystem with no volume
   mounted, so every restart, revision, or scale event starts from an empty schema. Fixing it means Azure
   Files with a single replica, or moving to Azure SQL.
+
+- **The broker and cache paths are not covered by tests.** Both are reachable only with a connection
+  string configured and the suite runs without one, so the publisher, the consumers and the cache are
+  checked by hand rather than by CI.
 
