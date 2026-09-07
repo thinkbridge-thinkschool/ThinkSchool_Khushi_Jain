@@ -18,6 +18,9 @@ param principalType string
 @description('HS256 signing key for the API\'s own JWTs')
 param jwtSigningKey string
 
+@description('Per-environment settings for the API, passed straight through to its module')
+param apiSettings object = {}
+
 var abbrs = loadJsonContent('./abbreviations.json')
 var resourceToken = uniqueString(subscription().id, resourceGroup().id, location)
 
@@ -112,80 +115,21 @@ resource quotesApiKeyVaultAccess 'Microsoft.Authorization/roleAssignments@2022-0
   }
 }
 
-module quotesApiFetchLatestImage './modules/fetch-container-image.bicep' = {
-  name: 'quotesApi-fetch-image'
-  params: {
-    exists: quotesApiExists
-    name: 'quotes-api'
-  }
-}
-
-module quotesApi 'br/public:avm/res/app/container-app:0.8.0' = {
+module quotesApi './modules/api.bicep' = {
   name: 'quotesApi'
   params: {
-    name: 'quotes-api'
-    ingressTargetPort: 8080
-    scaleMinReplicas: 1
-    scaleMaxReplicas: 10
-    secrets: {
-      secureList:  [
-      ]
-    }
-    containers: [
-      {
-        image: quotesApiFetchLatestImage.outputs.?containers[?0].?image ?? 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
-        name: 'main'
-        resources: {
-          cpu: json('0.5')
-          memory: '1.0Gi'
-        }
-        env: [
-          {
-            name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-            value: monitoring.outputs.applicationInsightsConnectionString
-          }
-          {
-            name: 'AZURE_CLIENT_ID'
-            value: quotesApiIdentity.outputs.clientId
-          }
-          {
-            name: 'PORT'
-            value: '8080'
-          }
-          // Without this the container inherits no environment name and the
-          // app would fall back to Development, loading developer settings in
-          // production.
-          {
-            name: 'ASPNETCORE_ENVIRONMENT'
-            value: 'Production'
-          }
-          // The only pointer the app needs; the signing key itself is fetched
-          // from the vault at startup using the managed identity above, so no
-          // secret value is ever present in the container's environment.
-          {
-            name: 'KeyVault__Uri'
-            value: keyVault.properties.vaultUri
-          }
-        ]
-      }
-    ]
-    managedIdentities:{
-      systemAssigned: false
-      userAssignedResourceIds: [quotesApiIdentity.outputs.resourceId]
-    }
-    registries:[
-      {
-        server: containerRegistry.outputs.loginServer
-        identity: quotesApiIdentity.outputs.resourceId
-      }
-    ]
-    environmentResourceId: containerAppsEnvironment.outputs.resourceId
     location: location
-    tags: union(tags, { 'azd-service-name': 'quotes-api' })
+    tags: tags
+    exists: quotesApiExists
+    environmentResourceId: containerAppsEnvironment.outputs.resourceId
+    containerRegistryLoginServer: containerRegistry.outputs.loginServer
+    identityResourceId: quotesApiIdentity.outputs.resourceId
+    identityClientId: quotesApiIdentity.outputs.clientId
+    applicationInsightsConnectionString: monitoring.outputs.applicationInsightsConnectionString
+    keyVaultUri: keyVault.properties.vaultUri
+    settings: apiSettings
   }
-  // Nothing in the container app's own definition references the role
-  // assignment, so without this the app can start before it is allowed to read
-  // the vault and fail on the first startup.
+  // Nothing in the app's definition references these, so without it the app can start before it may read the vault.
   dependsOn: [
     quotesApiKeyVaultAccess
     jwtSigningKeySecret

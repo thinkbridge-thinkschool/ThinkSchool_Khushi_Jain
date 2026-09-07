@@ -23,6 +23,9 @@ param principalType string
 @description('HS256 signing key for the API\'s own JWTs. Stored in Key Vault and read from there at startup; never written to configuration files.')
 param jwtSigningKey string
 
+@description('Per-environment settings for the API. Set only what differs from the module\'s defaults; see modules/api.bicep for the available properties.')
+param apiSettings object = {}
+
 // Tags that should be applied to all resources.
 // 
 // Note that 'azd-service-name' tags should be applied separately to service host resources.
@@ -49,6 +52,7 @@ module resources 'resources.bicep' = {
     principalType: principalType
     quotesApiExists: quotesApiExists
     jwtSigningKey: jwtSigningKey
+    apiSettings: apiSettings
   }
 }
 output AZURE_CONTAINER_REGISTRY_ENDPOINT string = resources.outputs.AZURE_CONTAINER_REGISTRY_ENDPOINT
