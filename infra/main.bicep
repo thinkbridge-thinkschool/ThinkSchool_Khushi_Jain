@@ -26,6 +26,15 @@ param jwtSigningKey string
 @description('Per-environment settings for the API. Set only what differs from the module\'s defaults; see modules/api.bicep for the available properties.')
 param apiSettings object = {}
 
+@description('Per-environment settings for the database. See modules/sql.bicep for the available properties.')
+param sqlSettings object = {}
+
+@description('Per-environment settings for Service Bus. See modules/servicebus.bicep for the available properties.')
+param serviceBusSettings object = {}
+
+@description('Create the database and the Service Bus namespace. Off by default because both bill from the moment they exist and the API still reads SQLite.')
+param deployDataServices bool = false
+
 // Tags that should be applied to all resources.
 // 
 // Note that 'azd-service-name' tags should be applied separately to service host resources.
@@ -53,6 +62,9 @@ module resources 'resources.bicep' = {
     quotesApiExists: quotesApiExists
     jwtSigningKey: jwtSigningKey
     apiSettings: apiSettings
+    sqlSettings: sqlSettings
+    serviceBusSettings: serviceBusSettings
+    deployDataServices: deployDataServices
   }
 }
 output AZURE_CONTAINER_REGISTRY_ENDPOINT string = resources.outputs.AZURE_CONTAINER_REGISTRY_ENDPOINT

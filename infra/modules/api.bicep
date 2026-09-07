@@ -1,25 +1,10 @@
-// Per-environment knobs. Every property is optional, so a parameter file sets
-// only what differs and a new setting is added here and nowhere else.
 type apiSettings = {
-  @description('Port the container listens on')
   targetPort: int?
-
-  @description('Lower bound of the scale range; zero lets an idle environment scale to nothing')
   minReplicas: int?
-
-  @description('Upper bound of the scale range')
   maxReplicas: int?
-
-  @description('CPU cores per replica, as a string because Bicep has no decimal literal')
   cpu: string?
-
-  @description('Memory per replica')
   memory: string?
-
-  @description('ASP.NET Core environment name the container runs under')
   aspNetCoreEnvironment: string?
-
-  @description('Image used before one of the app\'s own has been pushed to the registry')
   bootstrapImage: string?
 }
 
@@ -113,7 +98,6 @@ module app 'br/public:avm/res/app/container-app:0.8.0' = {
             name: 'ASPNETCORE_ENVIRONMENT'
             value: api.aspNetCoreEnvironment
           }
-          // Only a pointer, so no secret value sits in the container's environment.
           {
             name: 'KeyVault__Uri'
             value: keyVaultUri

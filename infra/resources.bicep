@@ -21,6 +21,18 @@ param jwtSigningKey string
 @description('Per-environment settings for the API, passed straight through to its module')
 param apiSettings object = {}
 
+@description('Per-environment settings for the database, passed straight through to its module')
+param sqlSettings object = {}
+
+@description('Per-environment settings for Service Bus, passed straight through to its module')
+param serviceBusSettings object = {}
+
+// Both data services bill from the moment they exist, and the API still reads
+// SQLite, so they stay described but unadopted until that changes. The parameter
+// files turn them on so a what-if can show them being created.
+@description('Create the database and the Service Bus namespace')
+param deployDataServices bool = false
+
 var abbrs = loadJsonContent('./abbreviations.json')
 var resourceToken = uniqueString(subscription().id, resourceGroup().id, location)
 
@@ -115,6 +127,31 @@ resource quotesApiKeyVaultAccess 'Microsoft.Authorization/roleAssignments@2022-0
   }
 }
 
+module serviceBus './modules/servicebus.bicep' = if (deployDataServices) {
+  name: 'serviceBus'
+  params: {
+    location: location
+    tags: tags
+    name: '${abbrs.serviceBusNamespaces}${resourceToken}'
+    keyVaultName: keyVault.name
+    settings: serviceBusSettings
+  }
+}
+
+// Reuses the deploying principal as the Entra administrator, so the server is
+// reachable without a SQL login existing anywhere.
+module sql './modules/sql.bicep' = if (deployDataServices) {
+  name: 'sql'
+  params: {
+    location: location
+    tags: tags
+    name: '${abbrs.sqlServers}${resourceToken}'
+    administratorPrincipalId: principalId
+    administratorPrincipalType: principalType
+    settings: sqlSettings
+  }
+}
+
 module quotesApi './modules/api.bicep' = {
   name: 'quotesApi'
   params: {
@@ -129,10 +166,11 @@ module quotesApi './modules/api.bicep' = {
     keyVaultUri: keyVault.properties.vaultUri
     settings: apiSettings
   }
-  // Nothing in the app's definition references these, so without it the app can start before it may read the vault.
+  // Nothing in the app's definition references these, so without it the app can start before its secrets exist.
   dependsOn: [
     quotesApiKeyVaultAccess
     jwtSigningKeySecret
+    serviceBus
   ]
 }
 output AZURE_CONTAINER_REGISTRY_ENDPOINT string = containerRegistry.outputs.loginServer
