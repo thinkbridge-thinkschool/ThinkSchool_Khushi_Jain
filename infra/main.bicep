@@ -35,6 +35,9 @@ param serviceBusSettings object = {}
 @description('Create the database and the Service Bus namespace. Off by default because both bill from the moment they exist and the API still reads SQLite.')
 param deployDataServices bool = false
 
+@description('Create the Container Apps environment and the API container app. The subscription allows one Container App Environment in total, so a second environment must leave this off.')
+param deployContainerApp bool = true
+
 // Tags that should be applied to all resources.
 // 
 // Note that 'azd-service-name' tags should be applied separately to service host resources.
@@ -65,6 +68,7 @@ module resources 'resources.bicep' = {
     sqlSettings: sqlSettings
     serviceBusSettings: serviceBusSettings
     deployDataServices: deployDataServices
+    deployContainerApp: deployContainerApp
   }
 }
 output AZURE_CONTAINER_REGISTRY_ENDPOINT string = resources.outputs.AZURE_CONTAINER_REGISTRY_ENDPOINT

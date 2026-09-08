@@ -1,5 +1,6 @@
 {
   "deployDataServices": true,
+  "deployContainerApp": false,
   "apiSettings": {
     "minReplicas": 2,
     "maxReplicas": 10

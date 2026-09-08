@@ -33,6 +33,11 @@ param serviceBusSettings object = {}
 @description('Create the database and the Service Bus namespace')
 param deployDataServices bool = false
 
+// The subscription allows one Container App Environment in total, and dev holds
+// it, so a second environment can provision everything except its compute.
+@description('Create the Container Apps environment and the API container app')
+param deployContainerApp bool = true
+
 var abbrs = loadJsonContent('./abbreviations.json')
 var resourceToken = uniqueString(subscription().id, resourceGroup().id, location)
 
@@ -71,7 +76,7 @@ module containerRegistry 'br/public:avm/res/container-registry/registry:0.1.1' =
 }
 
 // Container apps environment
-module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.4.5' = {
+module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.4.5' = if (deployContainerApp) {
   name: 'container-apps-environment'
   params: {
     logAnalyticsWorkspaceResourceId: monitoring.outputs.logAnalyticsWorkspaceResourceId
@@ -152,13 +157,13 @@ module sql './modules/sql.bicep' = if (deployDataServices) {
   }
 }
 
-module quotesApi './modules/api.bicep' = {
+module quotesApi './modules/api.bicep' = if (deployContainerApp) {
   name: 'quotesApi'
   params: {
     location: location
     tags: tags
     exists: quotesApiExists
-    environmentResourceId: containerAppsEnvironment.outputs.resourceId
+    environmentResourceId: containerAppsEnvironment!.outputs.resourceId
     containerRegistryLoginServer: containerRegistry.outputs.loginServer
     identityResourceId: quotesApiIdentity.outputs.resourceId
     identityClientId: quotesApiIdentity.outputs.clientId
@@ -174,4 +179,4 @@ module quotesApi './modules/api.bicep' = {
   ]
 }
 output AZURE_CONTAINER_REGISTRY_ENDPOINT string = containerRegistry.outputs.loginServer
-output AZURE_RESOURCE_QUOTES_API_ID string = quotesApi.outputs.resourceId
+output AZURE_RESOURCE_QUOTES_API_ID string = quotesApi.?outputs.resourceId ?? ''
