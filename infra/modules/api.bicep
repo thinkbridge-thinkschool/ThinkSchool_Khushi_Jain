@@ -6,6 +6,11 @@ type apiSettings = {
   memory: string?
   aspNetCoreEnvironment: string?
   bootstrapImage: string?
+  dataVolumeStorageName: string?
+  dataVolumeMountPath: string?
+  entraTenantId: string?
+  entraClientId: string?
+  entraAudience: string?
 }
 
 @description('The location used for all deployed resources')
@@ -46,12 +51,37 @@ var defaults = {
   minReplicas: 1
   maxReplicas: 10
   cpu: '0.5'
-  memory: '1.0Gi'
+  memory: '1Gi'
   aspNetCoreEnvironment: 'Production'
   bootstrapImage: 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
+  dataVolumeStorageName: 'quotesdata'
+  dataVolumeMountPath: '/data'
+  entraTenantId: ''
+  entraClientId: ''
+  entraAudience: ''
 }
 
 var api = union(defaults, settings)
+
+// Derived from the mount path so the database file cannot drift from the volume it sits on.
+var sqliteConnectionString = 'Data Source=${api.dataVolumeMountPath}/quotes.db'
+
+var entraEnv = empty(api.entraTenantId)
+  ? []
+  : [
+      {
+        name: 'Entra__TenantId'
+        value: api.entraTenantId
+      }
+      {
+        name: 'Entra__Audience'
+        value: api.entraAudience
+      }
+      {
+        name: 'Entra__ClientId'
+        value: api.entraClientId
+      }
+    ]
 
 module fetchLatestImage './fetch-container-image.bicep' = {
   name: '${name}-fetch-image'
@@ -72,6 +102,14 @@ module app 'br/public:avm/res/app/container-app:0.8.0' = {
       secureList: [
       ]
     }
+    // The SQLite file lives on this share, so the database survives a revision replacing the container.
+    volumes: [
+      {
+        name: api.dataVolumeStorageName
+        storageName: api.dataVolumeStorageName
+        storageType: 'AzureFile'
+      }
+    ]
     containers: [
       {
         image: fetchLatestImage.outputs.?containers[?0].?image ?? api.bootstrapImage
@@ -80,29 +118,44 @@ module app 'br/public:avm/res/app/container-app:0.8.0' = {
           cpu: json(api.cpu)
           memory: api.memory
         }
-        env: [
+        volumeMounts: [
           {
-            name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-            value: applicationInsightsConnectionString
-          }
-          {
-            name: 'AZURE_CLIENT_ID'
-            value: identityClientId
-          }
-          {
-            name: 'PORT'
-            value: string(api.targetPort)
-          }
-          // Without this the app falls back to Development and loads developer settings in production.
-          {
-            name: 'ASPNETCORE_ENVIRONMENT'
-            value: api.aspNetCoreEnvironment
-          }
-          {
-            name: 'KeyVault__Uri'
-            value: keyVaultUri
+            volumeName: api.dataVolumeStorageName
+            mountPath: api.dataVolumeMountPath
           }
         ]
+        env: concat(
+          [
+            {
+              name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+              value: applicationInsightsConnectionString
+            }
+            {
+              name: 'AZURE_CLIENT_ID'
+              value: identityClientId
+            }
+            {
+              name: 'PORT'
+              value: string(api.targetPort)
+            }
+            // Without this the app falls back to Development and loads developer settings in production.
+            {
+              name: 'ASPNETCORE_ENVIRONMENT'
+              value: api.aspNetCoreEnvironment
+            }
+            {
+              name: 'KeyVault__Uri'
+              value: keyVaultUri
+            }
+          ],
+          entraEnv,
+          [
+            {
+              name: 'ConnectionStrings__DefaultConnection'
+              value: sqliteConnectionString
+            }
+          ]
+        )
       }
     ]
     managedIdentities: {

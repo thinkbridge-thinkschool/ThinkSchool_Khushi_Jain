@@ -1,4 +1,5 @@
 type sqlSettings = {
+  location: string?
   skuName: string?
   skuTier: string?
   maxSizeBytes: int?
@@ -26,7 +27,9 @@ param administratorPrincipalType string = 'User'
 @description('Environment overrides; anything omitted falls back to the defaults below')
 param settings sqlSettings = {}
 
+// SQL keeps its own location because a region can refuse new servers while still accepting everything else.
 var defaults = {
+  location: location
   skuName: 'Basic'
   skuTier: 'Basic'
   maxSizeBytes: 2147483648
@@ -40,7 +43,7 @@ var sql = union(defaults, settings)
 
 resource server 'Microsoft.Sql/servers@2023-08-01-preview' = {
   name: name
-  location: location
+  location: sql.location
   tags: tags
   properties: {
     minimalTlsVersion: '1.2'
@@ -60,7 +63,7 @@ resource server 'Microsoft.Sql/servers@2023-08-01-preview' = {
 resource database 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
   parent: server
   name: sql.databaseName
-  location: location
+  location: sql.location
   tags: tags
   sku: {
     name: sql.skuName
