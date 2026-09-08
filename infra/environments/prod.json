@@ -1,0 +1,19 @@
+{
+  "deployDataServices": true,
+  "apiSettings": {
+    "minReplicas": 2,
+    "maxReplicas": 10
+  },
+  "sqlSettings": {
+    "location": "centralus",
+    "skuName": "S1",
+    "skuTier": "Standard",
+    "maxSizeBytes": 268435456000,
+    "backupStorageRedundancy": "Geo"
+  },
+  "serviceBusSettings": {
+    "sku": "Standard",
+    "maxDeliveryCount": 10,
+    "messageTimeToLive": "P7D"
+  }
+}

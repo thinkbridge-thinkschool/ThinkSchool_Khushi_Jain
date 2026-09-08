@@ -1,0 +1,22 @@
+{
+  "deployDataServices": true,
+  "apiSettings": {
+    "minReplicas": 0,
+    "maxReplicas": 2,
+    "entraTenantId": "5aaf8f39-9480-4424-9f90-2efcd26df931",
+    "entraClientId": "467f0295-3609-488c-a3ff-dd216dc9cf5a",
+    "entraAudience": "467f0295-3609-488c-a3ff-dd216dc9cf5a"
+  },
+  "sqlSettings": {
+    "location": "centralus",
+    "skuName": "Basic",
+    "skuTier": "Basic",
+    "maxSizeBytes": 2147483648,
+    "backupStorageRedundancy": "Local"
+  },
+  "serviceBusSettings": {
+    "sku": "Standard",
+    "maxDeliveryCount": 5,
+    "messageTimeToLive": "P1D"
+  }
+}
