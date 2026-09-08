@@ -3,6 +3,19 @@
 name: thinkschool-khushi-jain
 metadata:
     template: azd-init@1.31.1
+infra:
+    provider: bicep
+    deploymentStacks:
+        actionOnUnmanage:
+            # rg-dev holds eleven resources this template does not declare, so detaching
+            # the resource group keeps a teardown from taking them with it.
+            resourceGroups: detach
+            resources: delete
+        denySettings:
+            # denyDelete rather than denyWriteAndDelete, because azd deploy has to keep
+            # writing new container app revisions.
+            mode: denyDelete
+            applyToChildScopes: false
 services:
     quotes-api:
         project: QuotesApi
