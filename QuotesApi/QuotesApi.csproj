@@ -8,9 +8,8 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <ContainerImageName>quotes-api</ContainerImageName>
-    <ContainerImageTag>0.1.0</ContainerImageTag>
-    <ContainerBaseImage>mcr.microsoft.com/dotnet/aspnet:10.0-alpine</ContainerBaseImage>
+    <!-- The plain alpine image runs .NET in globalization-invariant mode, which Microsoft.Data.SqlClient refuses to open a connection in. -->
+    <ContainerBaseImage>mcr.microsoft.com/dotnet/aspnet:10.0-alpine-extra</ContainerBaseImage>
   </PropertyGroup>
 
   <ItemGroup>
