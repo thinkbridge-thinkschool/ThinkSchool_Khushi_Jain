@@ -391,6 +391,11 @@ The grant is a one-time step per database and cannot be part of the deployment: 
 created as a database user by an Entra administrator, from inside the database. Until it runs, the API starts
 and then fails to reach SQL.
 
+The Application Insights connection string reaches the app the other way round. It also lives in Key Vault,
+but the container app resolves it into `APPLICATIONINSIGHTS_CONNECTION_STRING` before the app starts, using
+the same identity — so the app setting holds a reference to the vault rather than the value. Two mechanisms,
+one rule: no secret is ever written into the container's environment.
+
 The `demo-app` frontend deploys separately, to Azure Static Web Apps, and reaches this API through a small
 Function App that holds a managed identity on its behalf. See `day17_swa_deploy/README.md`.
 

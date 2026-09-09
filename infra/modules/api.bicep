@@ -37,8 +37,8 @@ param identityResourceId string
 @description('Client id of that identity, which the Azure SDK credential chain reads')
 param identityClientId string
 
-@description('Application Insights connection string the app exports telemetry to')
-param applicationInsightsConnectionString string
+@description('Key Vault URI of the Application Insights connection string the app exports telemetry to')
+param applicationInsightsSecretUri string
 
 @description('URI of the Key Vault the app reads its secrets from at startup')
 param keyVaultUri string
@@ -73,6 +73,8 @@ var defaults = {
 var api = union(defaults, settings)
 
 var useSqlServer = !empty(sqlFullyQualifiedDomainName)
+
+var applicationInsightsSecretName = 'appinsights-connection-string'
 
 // Derived from the mount path so the database file cannot drift from the volume it sits on.
 var sqliteConnectionString = 'Data Source=${api.dataVolumeMountPath}/quotes.db'
@@ -170,8 +172,14 @@ module app 'br/public:avm/res/app/container-app:0.8.0' = {
     ingressTargetPort: api.targetPort
     scaleMinReplicas: api.minReplicas
     scaleMaxReplicas: api.maxReplicas
+    // The platform reads the vault with the app's identity, so the value is a pointer here and never a literal.
     secrets: {
       secureList: [
+        {
+          name: applicationInsightsSecretName
+          keyVaultUrl: applicationInsightsSecretUri
+          identity: identityResourceId
+        }
       ]
     }
     volumes: dataVolumes
@@ -188,7 +196,7 @@ module app 'br/public:avm/res/app/container-app:0.8.0' = {
           [
             {
               name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-              value: applicationInsightsConnectionString
+              secretRef: applicationInsightsSecretName
             }
             {
               name: 'AZURE_CLIENT_ID'

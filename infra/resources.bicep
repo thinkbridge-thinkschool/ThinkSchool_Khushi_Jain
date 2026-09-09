@@ -119,6 +119,15 @@ resource jwtSigningKeySecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   }
 }
 
+// The app never reads this one itself: the container app resolves it into an environment variable.
+resource appInsightsConnectionStringSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVault
+  name: 'appinsights-connection-string'
+  properties: {
+    value: monitoring.outputs.applicationInsightsConnectionString
+  }
+}
+
 // Key Vault Secrets User, scoped to this vault only, so the container's
 // managed identity can read secrets at startup without a standing access
 // policy or any credential of its own.
@@ -167,7 +176,7 @@ module quotesApi './modules/api.bicep' = if (deployContainerApp) {
     containerRegistryLoginServer: containerRegistry.outputs.loginServer
     identityResourceId: quotesApiIdentity.outputs.resourceId
     identityClientId: quotesApiIdentity.outputs.clientId
-    applicationInsightsConnectionString: monitoring.outputs.applicationInsightsConnectionString
+    applicationInsightsSecretUri: appInsightsConnectionStringSecret.properties.secretUri
     keyVaultUri: keyVault.properties.vaultUri
     serviceBusFullyQualifiedNamespace: deployDataServices
       ? serviceBus!.outputs.fullyQualifiedNamespace
