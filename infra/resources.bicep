@@ -138,7 +138,7 @@ module serviceBus './modules/servicebus.bicep' = if (deployDataServices) {
     location: location
     tags: tags
     name: '${abbrs.serviceBusNamespaces}${resourceToken}'
-    keyVaultName: keyVault.name
+    appPrincipalId: quotesApiIdentity.outputs.principalId
     settings: serviceBusSettings
   }
 }
@@ -169,13 +169,15 @@ module quotesApi './modules/api.bicep' = if (deployContainerApp) {
     identityClientId: quotesApiIdentity.outputs.clientId
     applicationInsightsConnectionString: monitoring.outputs.applicationInsightsConnectionString
     keyVaultUri: keyVault.properties.vaultUri
+    serviceBusFullyQualifiedNamespace: deployDataServices
+      ? serviceBus!.outputs.fullyQualifiedNamespace
+      : ''
     settings: apiSettings
   }
-  // Nothing in the app's definition references these, so without it the app can start before its secrets exist.
+  // Nothing in the app's definition references these, so without it the app can start before its secret exists.
   dependsOn: [
     quotesApiKeyVaultAccess
     jwtSigningKeySecret
-    serviceBus
   ]
 }
 output AZURE_CONTAINER_REGISTRY_ENDPOINT string = containerRegistry.outputs.loginServer

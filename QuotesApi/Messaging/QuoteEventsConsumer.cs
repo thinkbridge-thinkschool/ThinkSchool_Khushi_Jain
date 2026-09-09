@@ -19,6 +19,7 @@ namespace QuotesApi.Messaging;
 /// applied twice.
 /// </summary>
 public sealed class QuoteEventsConsumer(
+    ServiceBusClient client,
     IServiceScopeFactory scopeFactory,
     ILoggerFactory loggerFactory,
     IOptions<ServiceBusOptions> options,
@@ -29,12 +30,8 @@ public sealed class QuoteEventsConsumer(
     private readonly ServiceBusOptions _options = options.Value;
     private readonly List<ServiceBusProcessor> _processors = [];
 
-    private ServiceBusClient? _client;
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _client = new ServiceBusClient(_options.ConnectionString);
-
         for (var worker = 1; worker <= Math.Max(1, _options.AuditConsumers); worker++)
         {
             AddProcessor(_options.AuditSubscription, $"audit-{worker}");
@@ -74,11 +71,6 @@ public sealed class QuoteEventsConsumer(
             await processor.DisposeAsync();
         }
 
-        if (_client is not null)
-        {
-            await _client.DisposeAsync();
-        }
-
         logger.LogInformation("Quote events consumer stopped.");
 
         await base.StopAsync(cancellationToken);
@@ -86,7 +78,7 @@ public sealed class QuoteEventsConsumer(
 
     private void AddProcessor(string subscription, string worker)
     {
-        var processor = _client!.CreateProcessor(
+        var processor = client.CreateProcessor(
             _options.Topic,
             subscription,
             new ServiceBusProcessorOptions

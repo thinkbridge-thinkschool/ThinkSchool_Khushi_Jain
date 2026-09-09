@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using Azure.Identity;
+using Azure.Messaging.ServiceBus;
 using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -327,10 +328,17 @@ public static class InfrastructureExtensions
 
         var serviceBusOptions = serviceBusSection.Get<ServiceBusOptions>() ?? new ServiceBusOptions();
 
-        // Singleton either way: the broker-backed publisher holds a connection
-        // that is meant to be shared, and the logging one has no state at all.
+        // Singleton either way: the broker-backed publisher holds a sender that
+        // is meant to be reused, and the logging one has no state at all.
         if (serviceBusOptions.IsConfigured)
         {
+            // One client for the publisher and the consumers together, so the
+            // AMQP connection and the credential's token cache are shared
+            // rather than established once per component.
+            builder.Services.AddSingleton(_ => new ServiceBusClient(
+                serviceBusOptions.FullyQualifiedNamespace,
+                new DefaultAzureCredential()));
+
             builder.Services.AddSingleton<IIntegrationEventPublisher, ServiceBusPublisher>();
             builder.Services.AddHostedService<QuoteEventsConsumer>();
         }

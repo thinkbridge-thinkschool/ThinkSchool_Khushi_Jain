@@ -11,18 +11,15 @@ namespace QuotesApi.Messaging;
 /// </summary>
 public sealed class ServiceBusPublisher : IIntegrationEventPublisher, IAsyncDisposable
 {
-    private readonly ServiceBusClient _client;
     private readonly ServiceBusSender _sender;
     private readonly ILogger<ServiceBusPublisher> _logger;
 
     public ServiceBusPublisher(
+        ServiceBusClient client,
         IOptions<ServiceBusOptions> options,
         ILogger<ServiceBusPublisher> logger)
     {
-        var serviceBusOptions = options.Value;
-
-        _client = new ServiceBusClient(serviceBusOptions.ConnectionString);
-        _sender = _client.CreateSender(serviceBusOptions.Topic);
+        _sender = client.CreateSender(options.Value.Topic);
         _logger = logger;
     }
 
@@ -47,9 +44,6 @@ public sealed class ServiceBusPublisher : IIntegrationEventPublisher, IAsyncDisp
             message.EventType);
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        await _sender.DisposeAsync();
-        await _client.DisposeAsync();
-    }
+    // The client is the container's to dispose, so only the sender is torn down here.
+    public async ValueTask DisposeAsync() => await _sender.DisposeAsync();
 }

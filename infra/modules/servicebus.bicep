@@ -17,8 +17,8 @@ param tags object = {}
 @description('Name of the Service Bus namespace')
 param name string
 
-@description('Vault the app\'s connection string is written to')
-param keyVaultName string
+@description('Principal id of the identity the API runs as, granted send and receive on the namespace')
+param appPrincipalId string
 
 @description('Environment overrides; anything omitted falls back to the defaults below')
 param settings serviceBusSettings = {}
@@ -76,29 +76,27 @@ resource moderationSubscription 'Microsoft.ServiceBus/namespaces/topics/subscrip
   }
 }
 
-resource appAuthorizationRule 'Microsoft.ServiceBus/namespaces/authorizationRules@2022-10-01-preview' = {
-  parent: namespace
-  name: 'quotes-api'
-  properties: {
-    rights: [
-      'Send'
-      'Listen'
-    ]
-  }
-}
+var appRoleIds = [
+  '69a216fc-b8fb-44d8-bc22-1f3c2cd27a39' // Azure Service Bus Data Sender
+  '4f6d3b9b-027b-4f4c-9142-0e5a2a2247e0' // Azure Service Bus Data Receiver
+]
 
-resource vault 'Microsoft.KeyVault/vaults@2023-07-01' existing = {
-  name: keyVaultName
-}
-
-// The .NET Key Vault provider maps the double dash to ':', so this arrives as ServiceBus:ConnectionString.
-resource connectionStringSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
-  parent: vault
-  name: 'ServiceBus--ConnectionString'
-  properties: {
-    value: appAuthorizationRule.listKeys().primaryConnectionString
+// Data-plane access by role rather than by a shared access key, so the namespace
+// issues no key the app has to hold and nothing here has to be rotated.
+resource appRoles 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
+  for roleId in appRoleIds: {
+    scope: namespace
+    name: guid(namespace.id, appPrincipalId, roleId)
+    properties: {
+      principalId: appPrincipalId
+      principalType: 'ServicePrincipal'
+      roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleId)
+    }
   }
-}
+]
 
 output namespaceName string = namespace.name
 output topicName string = topic.name
+
+// serviceBusEndpoint carries a scheme and a port, which the SDK's namespace argument does not take.
+output fullyQualifiedNamespace string = '${namespace.name}.servicebus.windows.net'

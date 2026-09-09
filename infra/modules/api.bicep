@@ -43,6 +43,9 @@ param applicationInsightsConnectionString string
 @description('URI of the Key Vault the app reads its secrets from at startup')
 param keyVaultUri string
 
+@description('Host of the Service Bus namespace the app publishes to; empty leaves the broker unconfigured')
+param serviceBusFullyQualifiedNamespace string = ''
+
 @description('Environment overrides; anything omitted falls back to the defaults below')
 param settings apiSettings = {}
 
@@ -80,6 +83,16 @@ var entraEnv = empty(api.entraTenantId)
       {
         name: 'Entra__ClientId'
         value: api.entraClientId
+      }
+    ]
+
+// A host name, not a credential: the app authenticates to it with its managed identity.
+var serviceBusEnv = empty(serviceBusFullyQualifiedNamespace)
+  ? []
+  : [
+      {
+        name: 'ServiceBus__FullyQualifiedNamespace'
+        value: serviceBusFullyQualifiedNamespace
       }
     ]
 
@@ -149,6 +162,7 @@ module app 'br/public:avm/res/app/container-app:0.8.0' = {
             }
           ],
           entraEnv,
+          serviceBusEnv,
           [
             {
               name: 'ConnectionStrings__DefaultConnection'

@@ -364,8 +364,12 @@ Typed sections bind through the options pattern and are injected as `IOptions<T>
 
 Secrets never live in `appsettings.json` — user secrets locally, Key Vault in Azure.
 
-`ServiceBus:ConnectionString` and `Cache:RedisConnectionString` are absent by default. Supplying
+`ServiceBus:FullyQualifiedNamespace` and `Cache:RedisConnectionString` are absent by default. Supplying
 either switches on the broker or the second cache tier; without them the API runs on its own.
+
+The namespace is a host name, not a credential — the API authenticates to Service Bus with its identity
+and holds no key. In Azure that is the container's managed identity; locally it is your own `az login`,
+which needs the Azure Service Bus Data Sender and Data Receiver roles on the namespace.
 
 ## Deployment
 

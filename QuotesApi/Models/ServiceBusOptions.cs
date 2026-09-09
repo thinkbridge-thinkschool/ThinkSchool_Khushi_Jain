@@ -2,12 +2,14 @@ namespace QuotesApi.Models;
 
 /// <summary>
 /// The broker integration events are published to and consumed from. The
-/// connection string is a secret and is absent from appsettings.json; without
-/// it the API logs its events instead, and starts no consumer.
+/// namespace is a host name rather than a credential, since access is by
+/// managed identity; without it the API logs its events instead, and starts no
+/// consumer.
 /// </summary>
 public sealed class ServiceBusOptions
 {
-    public string ConnectionString { get; init; } = string.Empty;
+    /// <summary>Namespace host, as in <c>sb-abc123.servicebus.windows.net</c>, with no scheme or port.</summary>
+    public string FullyQualifiedNamespace { get; init; } = string.Empty;
 
     public string Topic { get; init; } = "quote-events";
 
@@ -18,5 +20,5 @@ public sealed class ServiceBusOptions
     /// <summary>Processors on the audit subscription. More than one is what makes them competing consumers.</summary>
     public int AuditConsumers { get; init; } = 2;
 
-    public bool IsConfigured => !string.IsNullOrWhiteSpace(ConnectionString);
+    public bool IsConfigured => !string.IsNullOrWhiteSpace(FullyQualifiedNamespace);
 }
