@@ -172,6 +172,8 @@ module quotesApi './modules/api.bicep' = if (deployContainerApp) {
     serviceBusFullyQualifiedNamespace: deployDataServices
       ? serviceBus!.outputs.fullyQualifiedNamespace
       : ''
+    sqlFullyQualifiedDomainName: deployDataServices ? sql!.outputs.fullyQualifiedDomainName : ''
+    sqlDatabaseName: deployDataServices ? sql!.outputs.databaseName : ''
     settings: apiSettings
   }
   // Nothing in the app's definition references these, so without it the app can start before its secret exists.
@@ -182,3 +184,8 @@ module quotesApi './modules/api.bicep' = if (deployContainerApp) {
 }
 output AZURE_CONTAINER_REGISTRY_ENDPOINT string = containerRegistry.outputs.loginServer
 output AZURE_RESOURCE_QUOTES_API_ID string = quotesApi.?outputs.resourceId ?? ''
+
+// What the one-time database grant needs, since only an Entra administrator can run it.
+output AZURE_SQL_SERVER string = deployDataServices ? sql!.outputs.fullyQualifiedDomainName : ''
+output AZURE_SQL_DATABASE string = deployDataServices ? sql!.outputs.databaseName : ''
+output AZURE_QUOTES_API_IDENTITY_NAME string = quotesApiIdentityName

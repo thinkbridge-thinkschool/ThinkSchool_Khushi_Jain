@@ -297,9 +297,7 @@ public static class InfrastructureExtensions
             }
         }
 
-        // Named rather than inferred from the connection string, since both
-        // providers accept a 'Data Source' key and would be told apart only by
-        // guessing at the rest.
+        // Named rather than inferred, since both providers accept a 'Data Source' key.
         var useSqlServer = string.Equals(
             builder.Configuration["Database:Provider"],
             "SqlServer",
@@ -307,10 +305,7 @@ public static class InfrastructureExtensions
 
         if (useSqlServer)
         {
-            // The derived context is registered as itself so that the EF Core
-            // tooling can find it, and the base type resolves to that same
-            // instance so nothing else in the app knows which provider it is
-            // talking to.
+            // Registered as itself so the EF Core tooling can find it; the base type resolves to the same instance.
             builder.Services.AddDbContext<SqlServerQuotesDbContext>(options =>
             {
                 options.UseSqlServer(connectionString);
@@ -362,9 +357,7 @@ public static class InfrastructureExtensions
         // is meant to be reused, and the logging one has no state at all.
         if (serviceBusOptions.IsConfigured)
         {
-            // One client for the publisher and the consumers together, so the
-            // AMQP connection and the credential's token cache are shared
-            // rather than established once per component.
+            // One client for the publisher and the consumers, so the connection and token cache are shared.
             builder.Services.AddSingleton(_ => new ServiceBusClient(
                 serviceBusOptions.FullyQualifiedNamespace,
                 new DefaultAzureCredential()));

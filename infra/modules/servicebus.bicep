@@ -81,8 +81,7 @@ var appRoleIds = [
   '4f6d3b9b-027b-4f4c-9142-0e5a2a2247e0' // Azure Service Bus Data Receiver
 ]
 
-// Data-plane access by role rather than by a shared access key, so the namespace
-// issues no key the app has to hold and nothing here has to be rotated.
+// Access by role rather than by key, so the namespace issues nothing that has to be held or rotated.
 resource appRoles 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
   for roleId in appRoleIds: {
     scope: namespace

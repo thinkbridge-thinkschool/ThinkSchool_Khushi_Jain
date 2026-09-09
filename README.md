@@ -380,20 +380,25 @@ set, in `Migrations/` and `Migrations/SqlServer/`, and the app applies whichever
 ```bash
 azd env set AZURE_JWT_SIGNING_KEY "$(openssl rand -base64 32)"
 azd up
+bash day25_identity/grant-sql-access.sh
 ```
 
 The key is written to Key Vault. The container receives only the vault's URI and reads the secret at startup
 through its managed identity, so the value never appears in the container's environment, in the Bicep, or in
 this repository. Use a different key from your local one.
 
+The grant is a one-time step per database and cannot be part of the deployment: the app's identity has to be
+created as a database user by an Entra administrator, from inside the database. Until it runs, the API starts
+and then fails to reach SQL.
+
 The `demo-app` frontend deploys separately, to Azure Static Web Apps, and reaches this API through a small
 Function App that holds a managed identity on its behalf. See `day17_swa_deploy/README.md`.
 
 ## Known gaps
 
-- **The deployed database is not durable.** SQLite writes to the container's own filesystem with no volume
-  mounted, so every restart, revision, or scale event starts from an empty schema. Fixing it means Azure
-  Files with a single replica, or moving to Azure SQL.
+- **SQL Server retries are off.** `EnableRetryOnFailure` is what Azure SQL normally wants for transient
+  faults, but its execution strategy refuses the user-initiated transaction the outbox write opens. Turning
+  it on means wrapping that transaction in an execution strategy.
 
 - **The broker and cache paths are not covered by tests.** Both are reachable only with a connection
   string configured and the suite runs without one, so the publisher, the consumers and the cache are

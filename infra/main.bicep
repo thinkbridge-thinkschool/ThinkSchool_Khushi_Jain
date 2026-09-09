@@ -73,3 +73,6 @@ module resources 'resources.bicep' = {
 }
 output AZURE_CONTAINER_REGISTRY_ENDPOINT string = resources.outputs.AZURE_CONTAINER_REGISTRY_ENDPOINT
 output AZURE_RESOURCE_QUOTES_API_ID string = resources.outputs.AZURE_RESOURCE_QUOTES_API_ID
+output AZURE_SQL_SERVER string = resources.outputs.AZURE_SQL_SERVER
+output AZURE_SQL_DATABASE string = resources.outputs.AZURE_SQL_DATABASE
+output AZURE_QUOTES_API_IDENTITY_NAME string = resources.outputs.AZURE_QUOTES_API_IDENTITY_NAME

@@ -46,6 +46,12 @@ param keyVaultUri string
 @description('Host of the Service Bus namespace the app publishes to; empty leaves the broker unconfigured')
 param serviceBusFullyQualifiedNamespace string = ''
 
+@description('Fully qualified name of the SQL server the app reads and writes; empty leaves it on SQLite')
+param sqlFullyQualifiedDomainName string = ''
+
+@description('Database on that server')
+param sqlDatabaseName string = ''
+
 @description('Environment overrides; anything omitted falls back to the defaults below')
 param settings apiSettings = {}
 
@@ -66,8 +72,61 @@ var defaults = {
 
 var api = union(defaults, settings)
 
+var useSqlServer = !empty(sqlFullyQualifiedDomainName)
+
 // Derived from the mount path so the database file cannot drift from the volume it sits on.
 var sqliteConnectionString = 'Data Source=${api.dataVolumeMountPath}/quotes.db'
+
+// No password field: the client fetches an Entra token for the identity User Id names.
+var sqlConnectionString = join(
+  [
+    'Server=tcp:${sqlFullyQualifiedDomainName},1433'
+    'Database=${sqlDatabaseName}'
+    'Encrypt=True'
+    'TrustServerCertificate=False'
+    'Authentication=Active Directory Default'
+    'User Id=${identityClientId}'
+  ],
+  ';'
+)
+
+var databaseEnv = useSqlServer
+  ? [
+      {
+        name: 'Database__Provider'
+        value: 'SqlServer'
+      }
+      {
+        name: 'ConnectionStrings__DefaultConnection'
+        value: sqlConnectionString
+      }
+    ]
+  : [
+      {
+        name: 'ConnectionStrings__DefaultConnection'
+        value: sqliteConnectionString
+      }
+    ]
+
+// The share carries the SQLite file across revisions, and has nothing to hold once the app is on SQL Server.
+var dataVolumes = useSqlServer
+  ? []
+  : [
+      {
+        name: api.dataVolumeStorageName
+        storageName: api.dataVolumeStorageName
+        storageType: 'AzureFile'
+      }
+    ]
+
+var dataVolumeMounts = useSqlServer
+  ? []
+  : [
+      {
+        volumeName: api.dataVolumeStorageName
+        mountPath: api.dataVolumeMountPath
+      }
+    ]
 
 var entraEnv = empty(api.entraTenantId)
   ? []
@@ -115,14 +174,7 @@ module app 'br/public:avm/res/app/container-app:0.8.0' = {
       secureList: [
       ]
     }
-    // The SQLite file lives on this share, so the database survives a revision replacing the container.
-    volumes: [
-      {
-        name: api.dataVolumeStorageName
-        storageName: api.dataVolumeStorageName
-        storageType: 'AzureFile'
-      }
-    ]
+    volumes: dataVolumes
     containers: [
       {
         image: fetchLatestImage.outputs.?containers[?0].?image ?? api.bootstrapImage
@@ -131,12 +183,7 @@ module app 'br/public:avm/res/app/container-app:0.8.0' = {
           cpu: json(api.cpu)
           memory: api.memory
         }
-        volumeMounts: [
-          {
-            volumeName: api.dataVolumeStorageName
-            mountPath: api.dataVolumeMountPath
-          }
-        ]
+        volumeMounts: dataVolumeMounts
         env: concat(
           [
             {
@@ -163,12 +210,7 @@ module app 'br/public:avm/res/app/container-app:0.8.0' = {
           ],
           entraEnv,
           serviceBusEnv,
-          [
-            {
-              name: 'ConnectionStrings__DefaultConnection'
-              value: sqliteConnectionString
-            }
-          ]
+          databaseEnv
         )
       }
     ]
