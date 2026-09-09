@@ -3,9 +3,19 @@ using QuotesApi.Models;
 
 namespace QuotesApi.Data;
 
-public class QuotesDbContext(DbContextOptions<QuotesDbContext> options)
-    : DbContext(options)
+public class QuotesDbContext : DbContext
 {
+    public QuotesDbContext(DbContextOptions<QuotesDbContext> options)
+        : base(options)
+    {
+    }
+
+    // A derived context brings its own options type, which is how a second provider gets a migration set of its own.
+    protected QuotesDbContext(DbContextOptions options)
+        : base(options)
+    {
+    }
+
     public DbSet<Quote> Quotes => Set<Quote>();
 
     public DbSet<User> Users => Set<User>();

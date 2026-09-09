@@ -42,11 +42,18 @@ public sealed class CollectionDetailsDapperQuery(QuotesDbContext db)
                     row.QuoteId!.Value,
                     row.Author!,
                     row.Text!,
-                    DateTimeOffset.Parse(row.AddedAt!, CultureInfo.InvariantCulture)))
+                    ToTimestamp(row.AddedAt!)))
                 .ToList());
     }
 
-    // SQLite has no datetimeoffset, so AddedAt arrives as the TEXT that EF wrote.
+    // SQLite has no datetimeoffset and hands back the TEXT that EF wrote; SQL Server hands back the value itself.
+    private static DateTimeOffset ToTimestamp(object value) => value switch
+    {
+        DateTimeOffset timestamp => timestamp,
+        string text => DateTimeOffset.Parse(text, CultureInfo.InvariantCulture),
+        _ => throw new InvalidOperationException($"AddedAt came back as {value.GetType()}.")
+    };
+
     private sealed class Row
     {
         public int Id { get; set; }
@@ -56,6 +63,8 @@ public sealed class CollectionDetailsDapperQuery(QuotesDbContext db)
         public int? QuoteId { get; set; }
         public string? Author { get; set; }
         public string? Text { get; set; }
-        public string? AddedAt { get; set; }
+
+        // Typed as object because the two providers return two different CLR types for it.
+        public object? AddedAt { get; set; }
     }
 }

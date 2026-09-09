@@ -371,6 +371,10 @@ The namespace is a host name, not a credential — the API authenticates to Serv
 and holds no key. In Azure that is the container's managed identity; locally it is your own `az login`,
 which needs the Azure Service Bus Data Sender and Data Receiver roles on the namespace.
 
+`Database:Provider` chooses the store: `SqlServer` reads `ConnectionStrings:DefaultConnection` as a SQL
+Server connection string, anything else reads it as a SQLite one. Each provider has its own migration
+set, in `Migrations/` and `Migrations/SqlServer/`, and the app applies whichever set matches at startup.
+
 ## Deployment
 
 ```bash

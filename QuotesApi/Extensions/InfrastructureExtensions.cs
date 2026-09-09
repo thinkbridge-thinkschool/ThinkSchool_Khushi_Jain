@@ -287,17 +287,47 @@ public static class InfrastructureExtensions
             builder.Configuration.GetConnectionString("DefaultConnection")
             ?? "Data Source=quotes.db";
 
-        builder.Services.AddDbContext<QuotesDbContext>(options =>
+        // Serilog already logs EF's commands at Debug in Development. This adds
+        // the parameter values to them, which never belong in a deployed log.
+        void AddDeveloperDiagnostics(DbContextOptionsBuilder options)
         {
-            options.UseSqlite(connectionString);
-
-            // Serilog already logs EF's commands at Debug in Development. This adds
-            // the parameter values to them, which never belong in a deployed log.
             if (builder.Environment.IsDevelopment())
             {
                 options.EnableSensitiveDataLogging();
             }
-        });
+        }
+
+        // Named rather than inferred from the connection string, since both
+        // providers accept a 'Data Source' key and would be told apart only by
+        // guessing at the rest.
+        var useSqlServer = string.Equals(
+            builder.Configuration["Database:Provider"],
+            "SqlServer",
+            StringComparison.OrdinalIgnoreCase);
+
+        if (useSqlServer)
+        {
+            // The derived context is registered as itself so that the EF Core
+            // tooling can find it, and the base type resolves to that same
+            // instance so nothing else in the app knows which provider it is
+            // talking to.
+            builder.Services.AddDbContext<SqlServerQuotesDbContext>(options =>
+            {
+                options.UseSqlServer(connectionString);
+                AddDeveloperDiagnostics(options);
+            });
+
+            builder.Services.AddScoped<QuotesDbContext>(services =>
+                services.GetRequiredService<SqlServerQuotesDbContext>());
+        }
+        else
+        {
+            builder.Services.AddDbContext<QuotesDbContext>(options =>
+            {
+                options.UseSqlite(connectionString);
+                AddDeveloperDiagnostics(options);
+            });
+        }
 
         builder.Services.AddScoped<IQuoteRepository, QuoteRepository>();
         builder.Services.AddScoped<ICollectionRepository, CollectionRepository>();
