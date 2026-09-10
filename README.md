@@ -396,6 +396,10 @@ but the container app resolves it into `APPLICATIONINSIGHTS_CONNECTION_STRING` b
 the same identity — so the app setting holds a reference to the vault rather than the value. Two mechanisms,
 one rule: no secret is ever written into the container's environment.
 
+The error-rate alert is the one optional piece of the deployment. `azd env set AZURE_ALERT_EMAIL <address>`
+before `azd up` creates the rule and an action group that emails it; without the address neither is created.
+See `day26_app_insights/README.md`.
+
 The `demo-app` frontend deploys separately, to Azure Static Web Apps, and reaches this API through a small
 Function App that holds a managed identity on its behalf. See `day17_swa_deploy/README.md`.
 

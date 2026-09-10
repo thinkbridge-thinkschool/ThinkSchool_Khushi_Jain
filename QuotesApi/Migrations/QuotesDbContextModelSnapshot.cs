@@ -64,6 +64,10 @@ namespace QuotesApi.Migrations
                     b.Property<DateTimeOffset?>("ProcessedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("TraceParent")
+                        .HasMaxLength(55)
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Id")

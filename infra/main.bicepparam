@@ -20,3 +20,5 @@ param deployContainerApp = settings.?deployContainerApp ?? true
 param apiSettings = settings.apiSettings
 param sqlSettings = settings.sqlSettings
 param serviceBusSettings = settings.serviceBusSettings
+param alertSettings = settings.alertSettings
+param alertEmail = readEnvironmentVariable('AZURE_ALERT_EMAIL', '')

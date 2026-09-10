@@ -32,6 +32,12 @@ param sqlSettings object = {}
 @description('Per-environment settings for Service Bus. See modules/servicebus.bicep for the available properties.')
 param serviceBusSettings object = {}
 
+@description('Per-environment settings for the error-rate alert. See modules/alerts.bicep for the available properties.')
+param alertSettings object = {}
+
+@description('Address the error-rate alert notifies. Left empty the alert is not created, since a rule nobody receives raises nothing.')
+param alertEmail string = ''
+
 @description('Create the database and the Service Bus namespace. Off by default because both bill from the moment they exist and the API still reads SQLite.')
 param deployDataServices bool = false
 
@@ -67,6 +73,8 @@ module resources 'resources.bicep' = {
     apiSettings: apiSettings
     sqlSettings: sqlSettings
     serviceBusSettings: serviceBusSettings
+    alertSettings: alertSettings
+    alertEmail: alertEmail
     deployDataServices: deployDataServices
     deployContainerApp: deployContainerApp
   }

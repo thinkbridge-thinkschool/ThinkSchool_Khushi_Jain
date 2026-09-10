@@ -1,0 +1,47 @@
+// 1. Latency by endpoint. p99 is the number to read: p50 stays flat while a tail forms.
+requests
+| where timestamp > ago(24h)
+| summarize
+    calls = sum(itemCount),
+    failed = sumif(itemCount, success == false),
+    p50 = round(percentile(duration, 50), 1),
+    p99 = round(percentile(duration, 99), 1)
+    by endpoint = operation_Name
+| order by p99 desc
+
+// 2. Dependency breakdown -- everything the app waits on outside itself, worst total wait first.
+dependencies
+| where timestamp > ago(24h)
+| summarize
+    calls = sum(itemCount),
+    failed = sumif(itemCount, success == false),
+    p50 = round(percentile(duration, 50), 1),
+    p99 = round(percentile(duration, 99), 1),
+    totalSeconds = round(sum(duration) / 1000, 1)
+    by type, target, name
+| order by totalSeconds desc
+
+// 3. Error rate per five minutes, which is what the alert watches.
+requests
+| where timestamp > ago(24h)
+| summarize total = sum(itemCount), failed = sumif(itemCount, success == false) by bin(timestamp, 5m)
+| extend errorRatePercent = round(100.0 * failed / total, 2)
+| order by timestamp asc
+
+// 4. The same measure without the time filter -- the query the alert rule in infra/modules/alerts.bicep runs.
+requests
+| summarize total = count(), failed = countif(success == false)
+| extend errorRatePercent = iff(total == 0, 0.0, 100.0 * failed / total)
+| project errorRatePercent
+
+// 5. One create end to end: the request, the outbox publish, the broker, the consumer and every command under them.
+let traceId = toscalar(
+    requests
+    | where timestamp > ago(24h)
+    | where operation_Name startswith "POST" and operation_Name contains "/api/quotes"
+    | top 1 by timestamp desc
+    | project operation_Id);
+union requests, dependencies
+| where operation_Id == traceId
+| project timestamp, itemType, role = cloud_RoleName, name, type, target, durationMs = duration, id, operation_ParentId
+| order by timestamp asc

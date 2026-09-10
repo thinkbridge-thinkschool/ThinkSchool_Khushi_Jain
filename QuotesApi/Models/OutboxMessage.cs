@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 
 namespace QuotesApi.Models;
@@ -5,6 +6,8 @@ namespace QuotesApi.Models;
 /// <summary>An integration event written in the same transaction as the change that raised it, for the relay to publish later.</summary>
 public sealed class OutboxMessage
 {
+    public const int MaximumTraceParentLength = 55;
+
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
 
     private OutboxMessage()
@@ -30,6 +33,9 @@ public sealed class OutboxMessage
 
     public DateTimeOffset OccurredAt { get; private set; }
 
+    /// <summary>The traceparent of the request that wrote the row, so the relay's publish continues that trace instead of starting one.</summary>
+    public string? TraceParent { get; private set; }
+
     /// <summary>Null until the relay has published it. The relay asks for exactly these rows.</summary>
     public DateTimeOffset? ProcessedAt { get; private set; }
 
@@ -40,7 +46,10 @@ public sealed class OutboxMessage
         new(messageId,
             typeof(TEvent).Name,
             JsonSerializer.Serialize(payload, SerializerOptions),
-            occurredAt);
+            occurredAt)
+        {
+            TraceParent = Activity.Current?.Id
+        };
 
     public void RecordAttempt() => AttemptCount++;
 

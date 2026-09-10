@@ -16,5 +16,9 @@
     "sku": "Standard",
     "maxDeliveryCount": 10,
     "messageTimeToLive": "P7D"
+  },
+  "alertSettings": {
+    "errorRatePercent": 2,
+    "severity": 1
   }
 }

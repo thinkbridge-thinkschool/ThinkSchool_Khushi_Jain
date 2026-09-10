@@ -88,10 +88,18 @@ public static class InfrastructureExtensions
         }
     }
 
-    private static void AddStructuredLogging(this WebApplicationBuilder builder) =>
-        builder.Host.UseSerilog((context, loggerConfiguration) => loggerConfiguration
-            .ReadFrom.Configuration(context.Configuration)
-            .Enrich.FromLogContext());
+    private static void AddStructuredLogging(this WebApplicationBuilder builder)
+    {
+        // Cleared first, so the forwarding below reaches the OpenTelemetry provider and not a second console.
+        builder.Logging.ClearProviders();
+
+        // writeToProviders is what puts these lines in App Insights: without it they reach Serilog's sinks and nothing else.
+        builder.Host.UseSerilog(
+            (context, loggerConfiguration) => loggerConfiguration
+                .ReadFrom.Configuration(context.Configuration)
+                .Enrich.FromLogContext(),
+            writeToProviders: true);
+    }
 
     private static void AddTelemetry(this WebApplicationBuilder builder)
     {
@@ -101,26 +109,42 @@ public static class InfrastructureExtensions
         var activitySource = new ActivitySource("QuotesApi");
         builder.Services.AddSingleton(activitySource);
 
+        var azureMonitorConfigured =
+            !string.IsNullOrWhiteSpace(builder.Configuration["AzureMonitor:ConnectionString"]) ||
+            !string.IsNullOrWhiteSpace(builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]);
+
+        var onSqlServer = string.Equals(
+            builder.Configuration["Database:Provider"],
+            "SqlServer",
+            StringComparison.OrdinalIgnoreCase);
+
         var telemetryBuilder = builder.Services.AddOpenTelemetry()
             .ConfigureResource(resource => resource.AddService("QuotesApi"))
-            .WithTracing(tracing => tracing
-                .AddSource("QuotesApi")
-                .AddAspNetCoreInstrumentation()
+            .WithTracing(tracing =>
+            {
+                tracing
+                    .AddSource("QuotesApi")
 
-                // Emits a span per database command, which is what makes a
-                // query-count problem such as an N+1 visible as repeated
-                // sibling spans under one request rather than as a single slow
-                // parent with no explanation inside it.
-                .AddEntityFrameworkCoreInstrumentation()
-                .AddHttpClientInstrumentation()
-                .AddOtlpExporter());
+                    // The broker's own send and receive spans. Without them the trace stops at the publish and the consumer's work starts a new one.
+                    .AddSource("Azure.*")
+                    .AddAspNetCoreInstrumentation()
+                    .AddHttpClientInstrumentation();
 
-        // Only wire up the Azure Monitor exporter when a connection string is
-        // actually configured, so local dev -- which only has the OTLP exporter
-        // feeding Jaeger -- stays free of export warnings for a destination
-        // that was never configured.
-        if (!string.IsNullOrWhiteSpace(builder.Configuration["AzureMonitor:ConnectionString"]) ||
-            !string.IsNullOrWhiteSpace(builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]))
+                // A span per database command, which is what makes a query-count problem such as an N+1 visible as repeated sibling spans.
+                // Left off where the Azure Monitor distro's own SQL Client instrumentation reports the same commands.
+                if (!azureMonitorConfigured || !onSqlServer)
+                {
+                    tracing.AddEntityFrameworkCoreInstrumentation();
+                }
+
+                // Nothing listens on the OTLP endpoint in Azure, and an exporter with no collector behind it retries for the life of the process.
+                if (!azureMonitorConfigured)
+                {
+                    tracing.AddOtlpExporter();
+                }
+            });
+
+        if (azureMonitorConfigured)
         {
             telemetryBuilder.UseAzureMonitor();
         }

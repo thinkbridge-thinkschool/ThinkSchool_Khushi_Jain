@@ -54,6 +54,9 @@ public class QuotesDbContext : DbContext
         {
             outbox.ToTable("Outbox");
 
+            outbox.Property(message => message.TraceParent)
+                .HasMaxLength(OutboxMessage.MaximumTraceParentLength);
+
             // The id a consumer dedupes on, so a duplicate cannot be written on this side either.
             outbox.HasIndex(message => message.MessageId).IsUnique();
 

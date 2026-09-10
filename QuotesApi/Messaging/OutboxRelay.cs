@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using QuotesApi.Data;
@@ -15,6 +16,7 @@ namespace QuotesApi.Messaging;
 public sealed class OutboxRelay(
     IServiceScopeFactory scopeFactory,
     OutboxSignal signal,
+    ActivitySource activitySource,
     IOptions<OutboxOptions> options,
     ILogger<OutboxRelay> logger) : BackgroundService
 {
@@ -100,6 +102,16 @@ public sealed class OutboxRelay(
             {
                 break;
             }
+
+            // The row carries the traceparent of the request that wrote it, so the delivery joins that trace rather than opening its own.
+            ActivityContext.TryParse(message.TraceParent, null, isRemote: true, out var writerContext);
+
+            using var activity = activitySource.StartActivity(
+                "outbox-publish",
+                ActivityKind.Internal,
+                writerContext);
+
+            activity?.SetTag("messaging.message.id", message.MessageId);
 
             // Recorded before the send, so an attempt that dies mid-flight still leaves evidence of having been tried.
             message.RecordAttempt();

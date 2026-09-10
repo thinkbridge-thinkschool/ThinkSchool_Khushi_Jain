@@ -27,6 +27,12 @@ param sqlSettings object = {}
 @description('Per-environment settings for Service Bus, passed straight through to its module')
 param serviceBusSettings object = {}
 
+@description('Per-environment settings for the error-rate alert, passed straight through to its module')
+param alertSettings object = {}
+
+@description('Address the error-rate alert notifies. Empty leaves the alert and its action group uncreated.')
+param alertEmail string = ''
+
 // Both data services bill from the moment they exist, and the API still reads
 // SQLite, so they stay described but unadopted until that changes. The parameter
 // files turn them on so a what-if can show them being created.
@@ -138,6 +144,19 @@ resource quotesApiKeyVaultAccess 'Microsoft.Authorization/roleAssignments@2022-0
     principalId: quotesApiIdentity.outputs.principalId
     principalType: 'ServicePrincipal'
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')
+  }
+}
+
+module alerts './modules/alerts.bicep' = if (!empty(alertEmail)) {
+  name: 'alerts'
+  params: {
+    location: location
+    tags: tags
+    name: 'error-rate-${resourceToken}'
+    actionGroupName: '${abbrs.insightsActionGroups}${resourceToken}'
+    applicationInsightsResourceId: monitoring.outputs.applicationInsightsResourceId
+    notificationEmail: alertEmail
+    settings: alertSettings
   }
 }
 

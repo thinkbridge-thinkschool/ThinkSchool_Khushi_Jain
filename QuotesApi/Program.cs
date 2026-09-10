@@ -1,6 +1,9 @@
 using QuotesApi.Controllers;
 using QuotesApi.Extensions;
 
+// The Service Bus SDK still keeps its send and receive spans behind this switch, and the consumer has no span to attach its work to without them.
+AppContext.SetSwitch("Azure.Experimental.EnableActivitySource", true);
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddInfrastructure();

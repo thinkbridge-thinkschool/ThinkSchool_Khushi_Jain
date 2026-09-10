@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using Azure.Messaging.ServiceBus;
 using Microsoft.EntityFrameworkCore;
@@ -22,6 +23,7 @@ public sealed class QuoteEventsConsumer(
     ServiceBusClient client,
     IServiceScopeFactory scopeFactory,
     ILoggerFactory loggerFactory,
+    ActivitySource activitySource,
     IOptions<ServiceBusOptions> options,
     ILogger<QuoteEventsConsumer> logger) : BackgroundService
 {
@@ -116,6 +118,16 @@ public sealed class QuoteEventsConsumer(
     {
         var message = args.Message;
 
+        // The SDK links its own receive span to the publisher's trace rather than parenting it, which App Insights does not stitch.
+        ActivityContext.TryParse(TraceParentOf(message), null, isRemote: true, out var publisherContext);
+
+        using var activity = activitySource.StartActivity(
+            $"consume-{subscription}",
+            ActivityKind.Consumer,
+            publisherContext);
+
+        activity?.SetTag("messaging.message.id", message.MessageId);
+
         // Neither of the next two failures is transient: no number of retries
         // teaches this consumer the type or repairs the body, so they go
         // straight to the dead-letter queue instead of round-tripping forever.
@@ -180,6 +192,13 @@ public sealed class QuoteEventsConsumer(
             await args.AbandonMessageAsync(message);
         }
     }
+
+    // Newer SDKs stamp the W3C name; Diagnostic-Id is the one they used before that.
+    private static string? TraceParentOf(ServiceBusReceivedMessage message) =>
+        message.ApplicationProperties.TryGetValue("traceparent", out var traceParent) ||
+        message.ApplicationProperties.TryGetValue("Diagnostic-Id", out traceParent)
+            ? traceParent as string
+            : null;
 
     private async Task ApplyAsync(
         string subscription,

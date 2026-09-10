@@ -73,6 +73,10 @@ namespace QuotesApi.Tests.SqlServer.Migrations
                     b.Property<DateTimeOffset?>("ProcessedAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<string>("TraceParent")
+                        .HasMaxLength(55)
+                        .HasColumnType("nvarchar(55)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Id")

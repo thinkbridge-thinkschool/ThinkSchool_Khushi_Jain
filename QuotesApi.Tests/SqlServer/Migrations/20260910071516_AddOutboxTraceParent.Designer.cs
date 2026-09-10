@@ -3,17 +3,20 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using QuotesApi.Data;
 
 #nullable disable
 
-namespace QuotesApi.Migrations.SqlServer
+namespace QuotesApi.Tests.SqlServer.Migrations
 {
-    [DbContext(typeof(SqlServerQuotesDbContext))]
-    partial class SqlServerQuotesDbContextModelSnapshot : ModelSnapshot
+    [DbContext(typeof(QuotesDbContext))]
+    [Migration("20260910071516_AddOutboxTraceParent")]
+    partial class AddOutboxTraceParent
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
