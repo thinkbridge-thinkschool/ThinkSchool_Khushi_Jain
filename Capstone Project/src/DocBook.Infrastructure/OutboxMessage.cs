@@ -13,5 +13,8 @@ public sealed class OutboxMessage
 
     public DateTimeOffset? ProcessedAt { get; set; }
 
-    public string? Error { get; set; }
+    public int Attempts { get; set; }
+
+    // The failure's type, never its text, which is free to quote the payload it choked on.
+    public string? LastFailure { get; set; }
 }
