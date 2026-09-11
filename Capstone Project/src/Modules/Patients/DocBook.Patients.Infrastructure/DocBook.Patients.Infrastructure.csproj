@@ -5,7 +5,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="BCrypt.Net-Next" Version="4.0.2" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.10" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\DocBook.Patients.Application\DocBook.Patients.Application.csproj" />
+    <ProjectReference Include="..\..\..\DocBook.Infrastructure\DocBook.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

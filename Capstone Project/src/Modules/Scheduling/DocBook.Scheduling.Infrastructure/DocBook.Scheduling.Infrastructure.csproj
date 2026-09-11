@@ -5,6 +5,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.10" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\DocBook.Scheduling.Application\DocBook.Scheduling.Application.csproj" />
     <ProjectReference Include="..\..\..\DocBook.Infrastructure\DocBook.Infrastructure.csproj" />
   </ItemGroup>

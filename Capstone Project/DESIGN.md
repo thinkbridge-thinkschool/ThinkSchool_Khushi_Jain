@@ -41,7 +41,8 @@ Invariants:
 - Only an active appointment that has not started can be cancelled.
 
 Two people booking the same doctor load the same root, so an optimistic concurrency check makes the
-second write fail and retry. The rule lives in the domain, not in a unique index.
+second write fail. The rule lives in the domain, not in a unique index. Booking inserts a child row
+without touching the root's, so the repository marks the root modified to force that check.
 
 Reads go the other way: a patient's upcoming appointments span many roots, so the read side queries
 the appointments table directly.
@@ -89,25 +90,32 @@ tests/
   DocBook.Scheduling.Domain.Tests/         the aggregate's invariants, no database
 ```
 
-What is scaffolded so far: the projects and their references, the aggregate and its invariants, the
-use cases, the contracts each module publishes, and each module's registration into the host. The
-adapters named in the tree — EF Core mapping, repositories, endpoints, the outbox dispatcher — are
-the next piece of work.
+Both modules that own data map to one SQL Server database, each into its own schema and with its own
+migration history table. `DocBook.Api` applies both migration sets at startup.
+
+Every route but `/health` needs a bearer token. The caller's identity is built from that token and
+passed to the handlers as an `Actor`, so no use case takes an identity from a request body. There are
+two roles: a patient, who acts only for themselves, and clinic staff, who open days and may act for
+anyone. Staff is a single account read from configuration, since the design has no staff aggregate.
 
 Dependencies run inward. `Domain` sees only the shared kernel. `Application` sees its own `Domain`
-plus other modules' `Contracts`. `Infrastructure` sees its own `Application` and is the only place
-EF Core or HTTP appears. `DocBook.Api` sees each module's `Infrastructure` and nothing else.
+plus other modules' `Contracts`. `Infrastructure` sees its own `Application`, the shared
+`DocBook.Infrastructure`, and is the only place EF Core or HTTP appears. `DocBook.Api` sees each
+module's `Infrastructure` and the shared one, and no module directly.
 
 The rule that keeps this modular is about project references: **no module may reference another
 module's Domain, Application, or Infrastructure — contracts only.** A wrong reference fails the
 build, so the compiler enforces the boundary instead of discipline.
 
-## Build
+## Build and run
 
 ```bash
 dotnet build "Capstone Project/DocBook.slnx"
 dotnet test "Capstone Project/DocBook.slnx"
 ```
+
+Running needs SQL Server and two environment variables; the steps are in
+[day27_security/README.md](../day27_security/README.md).
 
 ## Known limits
 
@@ -116,3 +124,6 @@ dotnet test "Capstone Project/DocBook.slnx"
 - The outbox is polled, so a confirmation lands seconds after the booking.
 - `IPatientDirectory` is a synchronous call from Scheduling into Patients — the one request-time
   coupling between modules.
+- Clinic staff is one account from configuration, so every member of staff shares an actor id.
+- Access tokens only, so signing out means waiting for the token to expire.
+- A signed-in patient can read any doctor's free slots, which is also how they learn a doctor is busy.
