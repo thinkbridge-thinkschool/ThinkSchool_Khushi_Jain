@@ -1,0 +1,2 @@
+# ZAP writes its generated automation plan here on every run.
+zap.yaml
