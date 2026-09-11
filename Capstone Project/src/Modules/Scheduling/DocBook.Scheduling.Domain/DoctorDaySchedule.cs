@@ -2,8 +2,7 @@ using DocBook.SharedKernel;
 
 namespace DocBook.Scheduling.Domain;
 
-// The aggregate root: one doctor, one date. Double booking is impossible because both appointments
-// live inside the same consistency boundary.
+// One doctor, one date: both appointments sit in the same boundary, so double booking cannot happen.
 public sealed class DoctorDaySchedule : AggregateRoot<DoctorDayScheduleId>
 {
     private readonly List<Appointment> _appointments = [];
@@ -39,7 +38,7 @@ public sealed class DoctorDaySchedule : AggregateRoot<DoctorDayScheduleId>
     {
         if (closesAt <= opensAt)
         {
-            throw new DomainException("A day must close after it opens.");
+            throw new DomainException("day_closes_before_it_opens", "A day must close after it opens.");
         }
 
         return new DoctorDaySchedule(DoctorDayScheduleId.New(), doctorId, date, opensAt, closesAt);
@@ -49,27 +48,33 @@ public sealed class DoctorDaySchedule : AggregateRoot<DoctorDayScheduleId>
     {
         if (string.IsNullOrWhiteSpace(reason))
         {
-            throw new DomainException("An appointment needs a reason.");
+            throw new DomainException("reason_required", "An appointment needs a reason.");
+        }
+
+        if (reason.Length > Appointment.MaxReasonLength)
+        {
+            throw new DomainException("reason_too_long", "That reason is too long.");
         }
 
         if (slot.Start <= now)
         {
-            throw new DomainException("An appointment cannot start in the past.");
+            throw new DomainException("slot_in_past", "An appointment cannot start in the past.");
         }
 
         if (DateOnly.FromDateTime(slot.Start.UtcDateTime) != Date || DateOnly.FromDateTime(slot.End.UtcDateTime) != Date)
         {
-            throw new DomainException("An appointment must fall on the day it is booked against.");
+            throw new DomainException("slot_wrong_day", "An appointment must fall on the day it is booked against.");
         }
 
+        // Closed and already taken share one code, so a refusal cannot be read as "someone is in it".
         if (TimeOnly.FromDateTime(slot.Start.UtcDateTime) < OpensAt || TimeOnly.FromDateTime(slot.End.UtcDateTime) > ClosesAt)
         {
-            throw new DomainException("An appointment must fall inside the doctor's opening hours.");
+            throw new DomainException("slot_unavailable", "An appointment must fall inside the doctor's opening hours.");
         }
 
         if (_appointments.Any(appointment => appointment.IsActive && appointment.Slot.Overlaps(slot)))
         {
-            throw new DomainException("The doctor already has an appointment in that slot.");
+            throw new DomainException("slot_unavailable", "The doctor already has an appointment in that slot.");
         }
 
         var booked = new Appointment(AppointmentId.New(), patientId, slot, reason);
@@ -82,14 +87,19 @@ public sealed class DoctorDaySchedule : AggregateRoot<DoctorDayScheduleId>
     {
         var appointment = Find(appointmentId);
 
+        if (reason.Length > Appointment.MaxReasonLength)
+        {
+            throw new DomainException("reason_too_long", "That reason is too long.");
+        }
+
         if (!appointment.IsActive)
         {
-            throw new DomainException("Only an active appointment can be cancelled.");
+            throw new DomainException("appointment_not_active", "Only an active appointment can be cancelled.");
         }
 
         if (appointment.Slot.Start <= now)
         {
-            throw new DomainException("An appointment can only be cancelled before it starts.");
+            throw new DomainException("appointment_already_started", "An appointment can only be cancelled before it starts.");
         }
 
         appointment.Cancel();
@@ -112,7 +122,35 @@ public sealed class DoctorDaySchedule : AggregateRoot<DoctorDayScheduleId>
         }
     }
 
+    // What is still free, never who holds the rest of the day or how many of them there are.
+    public IReadOnlyList<TimeSlot> FreeSlots(TimeSpan length, DateTimeOffset now)
+    {
+        if (length <= TimeSpan.Zero)
+        {
+            throw new DomainException("slot_length_invalid", "A slot must be longer than nothing.");
+        }
+
+        var free = new List<TimeSlot>();
+        var start = new DateTimeOffset(Date.ToDateTime(OpensAt), TimeSpan.Zero);
+        var closes = new DateTimeOffset(Date.ToDateTime(ClosesAt), TimeSpan.Zero);
+
+        while (start + length <= closes)
+        {
+            var candidate = new TimeSlot(start, start + length);
+
+            if (candidate.Start > now &&
+                !_appointments.Any(appointment => appointment.IsActive && appointment.Slot.Overlaps(candidate)))
+            {
+                free.Add(candidate);
+            }
+
+            start += length;
+        }
+
+        return free;
+    }
+
     private Appointment Find(AppointmentId appointmentId) =>
         _appointments.SingleOrDefault(appointment => appointment.Id == appointmentId)
-        ?? throw new DomainException("Unknown appointment.");
+        ?? throw new DomainException("appointment_unknown", "Unknown appointment.");
 }

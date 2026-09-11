@@ -8,7 +8,7 @@ public readonly record struct TimeSlot
     {
         if (end <= start)
         {
-            throw new DomainException("An appointment must end after it starts.");
+            throw new DomainException("slot_ends_before_it_starts", "An appointment must end after it starts.");
         }
 
         Start = start;

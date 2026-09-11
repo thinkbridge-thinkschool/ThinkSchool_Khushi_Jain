@@ -11,6 +11,8 @@ public enum AppointmentStatus
 // An entity inside the DoctorDaySchedule aggregate. It only ever changes through its root.
 public sealed class Appointment : Entity<AppointmentId>
 {
+    public const int MaxReasonLength = 500;
+
     internal Appointment(AppointmentId id, PatientId patientId, TimeSlot slot, string reason) : base(id)
     {
         PatientId = patientId;
@@ -29,6 +31,7 @@ public sealed class Appointment : Entity<AppointmentId>
 
     public AppointmentStatus Status { get; private set; }
 
+    // The most sensitive field here, and why nothing outside the aggregate sees a whole appointment.
     public string Reason { get; private set; } = string.Empty;
 
     public DateTimeOffset? ReminderSentAt { get; private set; }

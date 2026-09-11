@@ -1,5 +1,6 @@
 using DocBook.Patients.Contracts;
 using DocBook.Scheduling.Domain;
+using DocBook.SharedKernel;
 
 namespace DocBook.Scheduling.Application;
 
@@ -10,25 +11,39 @@ public sealed record BookAppointment(
     DateTimeOffset End,
     string Reason);
 
+public enum BookingOutcome
+{
+    Booked = 1,
+    Forbidden = 2,
+    Unavailable = 3,
+}
+
+public sealed record BookingResult(BookingOutcome Outcome, Guid AppointmentId);
+
 public sealed class BookAppointmentHandler(
     IDoctorDayScheduleRepository schedules,
     IPatientDirectory patients,
+    IAuditTrail audit,
     TimeProvider clock)
 {
-    // Returns null when the patient or the doctor's day does not exist. Rule breaks throw DomainException.
-    public async Task<Guid?> HandleAsync(BookAppointment command, CancellationToken cancellationToken)
+    public async Task<BookingResult> HandleAsync(
+        BookAppointment command,
+        Actor actor,
+        CancellationToken cancellationToken)
     {
-        if (await patients.FindAsync(command.PatientId, cancellationToken) is null)
+        // A patient books only for themselves; staff book for anyone.
+        if (!actor.IsStaff && !actor.Is(command.PatientId))
         {
-            return null;
+            return new BookingResult(BookingOutcome.Forbidden, Guid.Empty);
         }
 
         var date = DateOnly.FromDateTime(command.Start.UtcDateTime);
         var schedule = await schedules.FindAsync(new DoctorId(command.DoctorId), date, cancellationToken);
 
-        if (schedule is null)
+        // One outcome for an unknown patient and an unopened day, so neither probes the other.
+        if (schedule is null || await patients.FindAsync(command.PatientId, cancellationToken) is null)
         {
-            return null;
+            return new BookingResult(BookingOutcome.Unavailable, Guid.Empty);
         }
 
         var appointment = schedule.Book(
@@ -37,7 +52,10 @@ public sealed class BookAppointmentHandler(
             command.Reason,
             clock.GetUtcNow());
 
+        audit.Record(actor, "appointment.booked", appointment.Id.Value);
+
         await schedules.SaveChangesAsync(cancellationToken);
-        return appointment.Id.Value;
+
+        return new BookingResult(BookingOutcome.Booked, appointment.Id.Value);
     }
 }
