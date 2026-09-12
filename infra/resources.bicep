@@ -89,6 +89,13 @@ module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.4.5
     name: '${abbrs.appManagedEnvironments}${resourceToken}'
     location: location
     zoneRedundant: false
+    // Declaring a profile keeps this off an express environment, which cannot resolve the Key Vault reference in the app's secrets.
+    workloadProfiles: [
+      {
+        name: 'Consumption'
+        workloadProfileType: 'Consumption'
+      }
+    ]
   }
 }
 

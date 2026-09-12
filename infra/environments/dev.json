@@ -3,12 +3,12 @@
   "apiSettings": {
     "minReplicas": 0,
     "maxReplicas": 2,
-    "entraTenantId": "5aaf8f39-9480-4424-9f90-2efcd26df931",
-    "entraClientId": "467f0295-3609-488c-a3ff-dd216dc9cf5a",
-    "entraAudience": "467f0295-3609-488c-a3ff-dd216dc9cf5a"
+    "entraTenantId": "8d46a076-d093-416d-a57b-8692cde13bf8",
+    "entraClientId": "ba40a4e8-b183-4c09-b3e4-31772d527706",
+    "entraAudience": "ba40a4e8-b183-4c09-b3e4-31772d527706"
   },
   "sqlSettings": {
-    "location": "centralus",
+    "location": "eastasia",
     "skuName": "Basic",
     "skuTier": "Basic",
     "maxSizeBytes": 2147483648,
