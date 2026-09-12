@@ -160,63 +160,75 @@ module fetchLatestImage './fetch-container-image.bicep' = {
   }
 }
 
-module app 'br/public:avm/res/app/container-app:0.8.0' = {
-  name: '${name}-container-app'
-  params: {
-    name: name
-    ingressTargetPort: api.targetPort
-    scaleMinReplicas: api.minReplicas
-    scaleMaxReplicas: api.maxReplicas
-    volumes: dataVolumes
-    containers: [
-      {
-        image: fetchLatestImage.outputs.?containers[?0].?image ?? api.bootstrapImage
-        name: 'main'
-        resources: {
-          cpu: json(api.cpu)
-          memory: api.memory
-        }
-        volumeMounts: dataVolumeMounts
-        env: concat(
-          [
-            {
-              name: 'AZURE_CLIENT_ID'
-              value: identityClientId
-            }
-            {
-              name: 'PORT'
-              value: string(api.targetPort)
-            }
-            // Without this the app falls back to Development and loads developer settings in production.
-            {
-              name: 'ASPNETCORE_ENVIRONMENT'
-              value: api.aspNetCoreEnvironment
-            }
-            {
-              name: 'KeyVault__Uri'
-              value: keyVaultUri
-            }
-          ],
-          entraEnv,
-          serviceBusEnv,
-          databaseEnv
-        )
-      }
-    ]
-    managedIdentities: {
-      systemAssigned: false
-      userAssignedResourceIds: [identityResourceId]
+// Declared natively rather than through the AVM module, whose ingress object always carries properties an express environment rejects.
+resource app 'Microsoft.App/containerApps@2024-03-01' = {
+  name: name
+  location: location
+  tags: union(tags, { 'azd-service-name': name })
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${identityResourceId}': {}
     }
-    registries: [
-      {
-        server: containerRegistryLoginServer
-        identity: identityResourceId
+  }
+  properties: {
+    environmentId: environmentResourceId
+    configuration: {
+      ingress: {
+        external: true
+        targetPort: api.targetPort
+        transport: 'auto'
       }
-    ]
-    environmentResourceId: environmentResourceId
-    location: location
-    tags: union(tags, { 'azd-service-name': name })
+      registries: [
+        {
+          server: containerRegistryLoginServer
+          identity: identityResourceId
+        }
+      ]
+    }
+    template: {
+      volumes: dataVolumes
+      containers: [
+        {
+          image: fetchLatestImage.outputs.?containers[?0].?image ?? api.bootstrapImage
+          name: 'main'
+          resources: {
+            cpu: json(api.cpu)
+            memory: api.memory
+          }
+          volumeMounts: dataVolumeMounts
+          env: concat(
+            [
+              {
+                name: 'AZURE_CLIENT_ID'
+                value: identityClientId
+              }
+              {
+                name: 'PORT'
+                value: string(api.targetPort)
+              }
+              // Without this the app falls back to Development and loads developer settings in production.
+              {
+                name: 'ASPNETCORE_ENVIRONMENT'
+                value: api.aspNetCoreEnvironment
+              }
+              {
+                name: 'KeyVault__Uri'
+                value: keyVaultUri
+              }
+            ],
+            entraEnv,
+            serviceBusEnv,
+            databaseEnv
+          )
+        }
+      ]
+      scale: {
+        minReplicas: api.minReplicas
+        maxReplicas: api.maxReplicas
+      }
+    }
   }
 }
 
-output resourceId string = app.outputs.resourceId
+output resourceId string = app.id
