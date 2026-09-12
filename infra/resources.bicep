@@ -132,10 +132,10 @@ resource jwtSigningKeySecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   }
 }
 
-// The app never reads this one itself: the container app resolves it into an environment variable.
+// Arrives as AzureMonitor:ConnectionString, which the telemetry setup reads out of configuration.
 resource appInsightsConnectionStringSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   parent: keyVault
-  name: 'appinsights-connection-string'
+  name: 'AzureMonitor--ConnectionString'
   properties: {
     value: monitoring.outputs.applicationInsightsConnectionString
   }
@@ -202,7 +202,6 @@ module quotesApi './modules/api.bicep' = if (deployContainerApp) {
     containerRegistryLoginServer: containerRegistry.outputs.loginServer
     identityResourceId: quotesApiIdentity.outputs.resourceId
     identityClientId: quotesApiIdentity.outputs.clientId
-    applicationInsightsSecretUri: appInsightsConnectionStringSecret.properties.secretUri
     keyVaultUri: keyVault.properties.vaultUri
     serviceBusFullyQualifiedNamespace: deployDataServices
       ? serviceBus!.outputs.fullyQualifiedNamespace
@@ -215,6 +214,7 @@ module quotesApi './modules/api.bicep' = if (deployContainerApp) {
   dependsOn: [
     quotesApiKeyVaultAccess
     jwtSigningKeySecret
+    appInsightsConnectionStringSecret
   ]
 }
 output AZURE_CONTAINER_REGISTRY_ENDPOINT string = containerRegistry.outputs.loginServer
