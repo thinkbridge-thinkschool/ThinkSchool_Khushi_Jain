@@ -8,7 +8,7 @@
     "entraAudience": "ba40a4e8-b183-4c09-b3e4-31772d527706"
   },
   "sqlSettings": {
-    "location": "eastasia",
+    "location": "koreacentral",
     "skuName": "Basic",
     "skuTier": "Basic",
     "maxSizeBytes": 2147483648,
