@@ -28,9 +28,6 @@ param exists bool
 @description('Resource id of the Container Apps environment that hosts the app')
 param environmentResourceId string
 
-@description('Login server of the registry the image is pulled from')
-param containerRegistryLoginServer string
-
 @description('Resource id of the user-assigned identity the app runs as')
 param identityResourceId string
 
@@ -179,12 +176,6 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
         targetPort: api.targetPort
         transport: 'auto'
       }
-      registries: [
-        {
-          server: containerRegistryLoginServer
-          identity: identityResourceId
-        }
-      ]
     }
     template: {
       volumes: dataVolumes

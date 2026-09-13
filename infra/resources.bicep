@@ -71,6 +71,9 @@ module containerRegistry 'br/public:avm/res/container-registry/registry:0.1.1' =
     location: location
     tags: tags
     publicNetworkAccess: 'Enabled'
+    // Express environments strip a container app's registry credentials, so the image is pulled anonymously; Standard is the lowest tier that allows that.
+    acrSku: 'Standard'
+    anonymousPullEnabled: true
     roleAssignments:[
       {
         principalId: quotesApiIdentity.outputs.principalId
@@ -81,22 +84,34 @@ module containerRegistry 'br/public:avm/res/container-registry/registry:0.1.1' =
   }
 }
 
-// Container apps environment
-module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.4.5' = if (deployContainerApp) {
-  name: 'container-apps-environment'
-  params: {
-    logAnalyticsWorkspaceResourceId: monitoring.outputs.logAnalyticsWorkspaceResourceId
-    name: '${abbrs.appManagedEnvironments}${resourceToken}'
-    location: location
-    zoneRedundant: false
-    // Declaring a profile keeps this off an express environment, which cannot resolve the Key Vault reference in the app's secrets.
+resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2022-10-01' existing = {
+  name: '${abbrs.operationalInsightsWorkspaces}${resourceToken}'
+}
+
+// Declared on a current API version: an environment requested through an older one is provisioned as an express environment, which supports neither Key Vault references nor identity-based registry pull.
+resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' = if (deployContainerApp) {
+  name: '${abbrs.appManagedEnvironments}${resourceToken}'
+  location: location
+  tags: tags
+  properties: {
+    appLogsConfiguration: {
+      destination: 'log-analytics'
+      logAnalyticsConfiguration: {
+        customerId: logAnalyticsWorkspace.properties.customerId
+        sharedKey: logAnalyticsWorkspace.listKeys().primarySharedKey
+      }
+    }
     workloadProfiles: [
       {
         name: 'Consumption'
         workloadProfileType: 'Consumption'
       }
     ]
+    zoneRedundant: false
   }
+  dependsOn: [
+    monitoring
+  ]
 }
 
 module quotesApiIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.2.1' = {
@@ -198,8 +213,7 @@ module quotesApi './modules/api.bicep' = if (deployContainerApp) {
     location: location
     tags: tags
     exists: quotesApiExists
-    environmentResourceId: containerAppsEnvironment!.outputs.resourceId
-    containerRegistryLoginServer: containerRegistry.outputs.loginServer
+    environmentResourceId: containerAppsEnvironment!.id
     identityResourceId: quotesApiIdentity.outputs.resourceId
     identityClientId: quotesApiIdentity.outputs.clientId
     keyVaultUri: keyVault.properties.vaultUri
@@ -215,6 +229,7 @@ module quotesApi './modules/api.bicep' = if (deployContainerApp) {
     quotesApiKeyVaultAccess
     jwtSigningKeySecret
     appInsightsConnectionStringSecret
+    containerRegistry
   ]
 }
 output AZURE_CONTAINER_REGISTRY_ENDPOINT string = containerRegistry.outputs.loginServer

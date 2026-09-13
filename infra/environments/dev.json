@@ -3,6 +3,7 @@
   "apiSettings": {
     "minReplicas": 0,
     "maxReplicas": 2,
+    "bootstrapImage": "cr5364vpkwf42we.azurecr.io/thinkschool-khushi-jain/quotes-api-dev:azd-deploy-1789307328",
     "entraTenantId": "8d46a076-d093-416d-a57b-8692cde13bf8",
     "entraClientId": "ba40a4e8-b183-4c09-b3e4-31772d527706",
     "entraAudience": "ba40a4e8-b183-4c09-b3e4-31772d527706"

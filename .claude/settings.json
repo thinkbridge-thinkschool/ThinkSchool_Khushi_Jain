@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(az containerapp *)",
+      "Bash(az acr *)",
+      "Bash(curl -s -o /dev/null -w \"http %{http_code}\\\\n\" -m 120 https://quotes-api.icymeadow-b25e0c2a.eastasia.azurecontainerapps.io/health)"
+    ]
+  }
+}
