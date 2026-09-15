@@ -21,12 +21,12 @@ Six calls, and a seventh thing that is not a call:
 
 ## The commits
 
-    1f5355f Drive the whole booking flow from one script
-    99fb37e Read a patient's appointments through the schedule that owns them
-    a75aca2 Let a deployment bring up the database on its own
-    04713d3 Give the clinic desk an account the deployment can sign in with
+    743fb27 Drive the whole booking flow from one script
+    62c04c1 Read a patient's appointments through the schedule that owns them
+    4de5941 Let a deployment bring up the database on its own
+    95039f3 Give the clinic desk an account the deployment can sign in with
 
-Two of these are things the flow could not run without. **The clinic desk had no account** — the code
+This write-up is the fifth. Two of the four are things the flow could not run without. **The clinic desk had no account** — the code
 read `Staff:Id`, `Staff:Email` and `Staff:PasswordHash` from configuration and nothing set them
 anywhere, so step 5 was impossible. They are now validated at startup, so a missing account stops the
 app with a message instead of failing as an unexplained 401 halfway through the flow.
