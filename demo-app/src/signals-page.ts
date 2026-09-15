@@ -14,14 +14,11 @@ const PAGE_SIZE = 5;
   selector: 'app-signals-page',
   template: `
     <section class="card">
-      <h2>Signals, zoneless, standalone</h2>
-      <p class="hint">
-        The page filter is a computed() over the loaded page, so it costs no request. Paging runs
-        through an effect() that reads page().
-      </p>
+      <h2>Quotes</h2>
+      <p class="hint">Browse the collection and search.</p>
 
       <div class="field">
-        <label for="author-filter">Author contains</label>
+        <label for="author-filter">Search</label>
         <input
           id="author-filter"
           [value]="author()"
@@ -45,11 +42,9 @@ const PAGE_SIZE = 5;
         @default {
           @if (visible().length === 0) {
             @if (total() === 0) {
-              <p class="state">
-                No quotes yet. Run <code>./seed-quotes.sh</code> to add some, then reload.
-              </p>
+              <p class="state">No quotes yet.</p>
             } @else {
-              <p class="state">Nothing on this page matches that filter.</p>
+              <p class="state">Nothing on this page matches that search.</p>
             }
           } @else {
             <ul class="quotes">
