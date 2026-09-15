@@ -67,8 +67,7 @@ public static class PatientsController
         {
             var staff = staffOptions.Value;
 
-            if (staff.IsConfigured &&
-                string.Equals(staff.Email, request.Email.Trim(), StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(staff.Email, request.Email.Trim(), StringComparison.OrdinalIgnoreCase))
             {
                 return passwords.Verify(request.Password, staff.PasswordHash)
                     ? Issued(tokens, new Actor(staff.Id, ActorRole.Staff))

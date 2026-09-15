@@ -24,7 +24,11 @@ public static class PatientsModule
                 sql.EnableRetryOnFailure();
             }));
 
-        services.Configure<StaffOptions>(configuration.GetSection("Staff"));
+        // Refused at startup rather than at the first booking: with no staff, no day is ever opened.
+        services.AddOptions<StaffOptions>()
+            .Bind(configuration.GetSection("Staff"))
+            .Validate(staff => staff.IsConfigured, StaffOptions.MissingAccountMessage)
+            .ValidateOnStart();
 
         services.AddScoped<RegisterPatientHandler>();
         services.AddScoped<AuthenticatePatientHandler>();
