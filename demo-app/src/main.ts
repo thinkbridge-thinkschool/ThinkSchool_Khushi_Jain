@@ -7,7 +7,7 @@ import {
   type ActivatedRouteSnapshot,
 } from '@angular/router';
 import { AppComponent } from './app';
-import { authInterceptor, errorMappingInterceptor, retryInterceptor } from './http';
+import { API_BASE_URL, authInterceptor, errorMappingInterceptor, retryInterceptor } from './http';
 import { routes } from './routes';
 import { DEV_CREDENTIALS, refreshInterceptor, type DevCredentials } from './session';
 
@@ -72,6 +72,11 @@ async function readDevCredentials(): Promise<DevCredentials | null> {
 async function start(): Promise<void> {
   const devCredentials = await readDevCredentials();
 
+  const apiBaseUrl =
+    location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+      ? ''
+      : 'https://quotes-bff.redplant-dcf820b4.koreacentral.azurecontainerapps.io';
+
   await bootstrapApplication(AppComponent, {
     providers: [
       provideRouter(
@@ -94,6 +99,7 @@ async function start(): Promise<void> {
         ]),
       ),
       { provide: DEV_CREDENTIALS, useValue: devCredentials },
+      { provide: API_BASE_URL, useValue: apiBaseUrl },
     ],
   });
 }

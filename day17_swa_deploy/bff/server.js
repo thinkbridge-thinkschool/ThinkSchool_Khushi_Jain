@@ -6,6 +6,8 @@ const apiBaseUrl = process.env.QUOTES_API_BASE_URL ?? '';
 const apiScope = process.env.QUOTES_API_SCOPE ?? '';
 const introspectionEnabled = (process.env.TOKEN_INTROSPECTION_ENABLED ?? '').toLowerCase() === 'true';
 
+const allowedOrigin = process.env.ALLOWED_ORIGIN ?? '';
+
 const credential = new DefaultAzureCredential();
 
 const MANAGED_IDENTITY = 'managed-identity';
@@ -97,6 +99,23 @@ async function relay(req, res, path, search, authorization, label, body) {
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
   const path = url.pathname;
+
+  // The front end is served from the Static Web App's origin, not this one, so
+  // the browser needs explicit permission and an answer to its preflight.
+  if (allowedOrigin && req.headers.origin === allowedOrigin) {
+    res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+    res.setHeader('Vary', 'Origin');
+  }
+
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204, {
+      'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+      'Access-Control-Max-Age': '600',
+    });
+
+    return res.end();
+  }
 
   if (path === '/health') {
     return send(res, 200, { status: 'ok' });
