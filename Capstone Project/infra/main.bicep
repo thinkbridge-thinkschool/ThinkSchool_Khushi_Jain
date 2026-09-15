@@ -15,8 +15,16 @@ param administratorPrincipalType string = 'User'
 @description('Whether the SQL server and the vault answer on their public endpoints')
 param publicNetworkAccess string = 'Disabled'
 
+// The database is the only part of this the happy path needs, so it can be brought up on its own.
+@description('Whether to deploy the application tier as well as the database')
+param deployApplication bool = true
+
+@description('One address let through the SQL firewall, for an API run outside Azure')
+param developerIpAddress string = ''
+
 var resourceToken = uniqueString(resourceGroup().id, applicationName)
 var databaseName = 'docbook'
+var apiSiteName = 'app-${applicationName}-${resourceToken}'
 var keyVaultName = 'kv${take(replace(applicationName, '-', ''), 8)}${take(resourceToken, 12)}'
 
 var sqlPrivateZoneName = 'privatelink${environment().suffixes.sqlServerHostname}'
@@ -25,7 +33,7 @@ var vaultPrivateZoneName = 'privatelink.vaultcore.azure.net'
 var secretsOfficerRoleId = 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7'
 var secretsUserRoleId = '4633458b-17de-408a-b874-0445c86b69e6'
 
-resource network 'Microsoft.Network/virtualNetworks@2023-11-01' = {
+resource network 'Microsoft.Network/virtualNetworks@2023-11-01' = if (deployApplication) {
   name: 'vnet-${applicationName}-${resourceToken}'
   location: location
   properties: {
@@ -90,7 +98,17 @@ resource database 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
   }
 }
 
-resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
+// Until the application tier exists the API runs outside Azure, so it arrives on the public endpoint.
+resource developerAccess 'Microsoft.Sql/servers/firewallRules@2023-08-01-preview' = if (!empty(developerIpAddress)) {
+  parent: sqlServer
+  name: 'developer'
+  properties: {
+    startIpAddress: developerIpAddress
+    endIpAddress: developerIpAddress
+  }
+}
+
+resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = if (deployApplication) {
   name: keyVaultName
   location: location
   properties: {
@@ -110,7 +128,7 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
   }
 }
 
-resource plan 'Microsoft.Web/serverfarms@2023-12-01' = {
+resource plan 'Microsoft.Web/serverfarms@2023-12-01' = if (deployApplication) {
   name: 'plan-${applicationName}-${resourceToken}'
   location: location
   sku: {
@@ -123,8 +141,8 @@ resource plan 'Microsoft.Web/serverfarms@2023-12-01' = {
   }
 }
 
-resource api 'Microsoft.Web/sites@2023-12-01' = {
-  name: 'app-${applicationName}-${resourceToken}'
+resource api 'Microsoft.Web/sites@2023-12-01' = if (deployApplication) {
+  name: apiSiteName
   location: location
   identity: {
     type: 'SystemAssigned'
@@ -165,7 +183,7 @@ resource api 'Microsoft.Web/sites@2023-12-01' = {
   }
 }
 
-module sqlPrivateLink './modules/private-endpoint.bicep' = {
+module sqlPrivateLink './modules/private-endpoint.bicep' = if (deployApplication) {
   name: 'sql-private-endpoint'
   params: {
     location: location
@@ -178,7 +196,7 @@ module sqlPrivateLink './modules/private-endpoint.bicep' = {
   }
 }
 
-module vaultPrivateLink './modules/private-endpoint.bicep' = {
+module vaultPrivateLink './modules/private-endpoint.bicep' = if (deployApplication) {
   name: 'vault-private-endpoint'
   params: {
     location: location
@@ -192,7 +210,7 @@ module vaultPrivateLink './modules/private-endpoint.bicep' = {
 }
 
 // Read only, and on this vault only, so the app holds no credential of its own.
-resource appVaultAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+resource appVaultAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (deployApplication) {
   scope: keyVault
   name: guid(keyVault.id, api.id, secretsUserRoleId)
   properties: {
@@ -203,7 +221,7 @@ resource appVaultAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
 }
 
 // Writing the signing key is a data-plane call, which RBAC governs separately from deploying.
-resource administratorVaultAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+resource administratorVaultAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (deployApplication) {
   scope: keyVault
   name: guid(keyVault.id, administratorPrincipalId, secretsOfficerRoleId)
   properties: {
@@ -213,8 +231,8 @@ resource administratorVaultAccess 'Microsoft.Authorization/roleAssignments@2022-
   }
 }
 
-output apiName string = api.name
-output apiHostName string = api.properties.defaultHostName
+output apiName string = deployApplication ? apiSiteName : ''
+output apiHostName string = api.?properties.defaultHostName ?? ''
 output sqlServerFullyQualifiedDomainName string = sqlServer.properties.fullyQualifiedDomainName
 output sqlDatabaseName string = database.name
-output keyVaultName string = keyVault.name
+output keyVaultName string = deployApplication ? keyVaultName : ''
