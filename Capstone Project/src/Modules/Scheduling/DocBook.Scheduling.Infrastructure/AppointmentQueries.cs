@@ -23,44 +23,32 @@ public sealed class AppointmentQueries(SchedulingDbContext context, TimeProvider
         var owner = new PatientId(patientId);
         var from = clock.GetUtcNow();
 
-        var rows = await context.Appointments
-            .Where(appointment => appointment.PatientId == owner && appointment.Slot.Start >= from)
-            .OrderBy(appointment => appointment.Slot.Start)
+        // The doctor is on the schedule row, so the answer is one join rather than a second query.
+        var rows = await context.Schedules
+            .SelectMany(
+                schedule => schedule.Appointments,
+                (schedule, appointment) => new
+                {
+                    schedule.DoctorId,
+                    appointment.Id,
+                    appointment.PatientId,
+                    Start = appointment.Slot.Start,
+                    End = appointment.Slot.End,
+                    appointment.Status,
+                    appointment.Reason
+                })
+            .Where(row => row.PatientId == owner && row.Start >= from)
+            .OrderBy(row => row.Start)
             .Skip(skip)
             .Take(take)
-            .Select(appointment => new
-            {
-                appointment.Id,
-                appointment.Slot,
-                appointment.Status,
-                appointment.Reason,
-                ScheduleId = EF.Property<Guid>(appointment, "ScheduleId")
-            })
             .ToListAsync(cancellationToken);
-
-        if (rows.Count == 0)
-        {
-            return [];
-        }
-
-        var scheduleIds = rows
-            .Select(row => new DoctorDayScheduleId(row.ScheduleId))
-            .Distinct()
-            .ToList();
-
-        var doctors = await context.Schedules
-            .Where(schedule => scheduleIds.Contains(schedule.Id))
-            .Select(schedule => new { schedule.Id, schedule.DoctorId })
-            .ToListAsync(cancellationToken);
-
-        var doctorBySchedule = doctors.ToDictionary(row => row.Id.Value, row => row.DoctorId.Value);
 
         return rows
             .Select(row => new PatientAppointment(
                 row.Id.Value,
-                doctorBySchedule.GetValueOrDefault(row.ScheduleId),
-                row.Slot.Start,
-                row.Slot.End,
+                row.DoctorId.Value,
+                row.Start,
+                row.End,
                 row.Status.ToString(),
                 row.Reason))
             .ToList();
