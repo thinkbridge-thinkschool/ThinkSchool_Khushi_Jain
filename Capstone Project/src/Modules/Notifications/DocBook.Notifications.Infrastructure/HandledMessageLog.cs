@@ -1,4 +1,5 @@
 using DocBook.Notifications.Application;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
 namespace DocBook.Notifications.Infrastructure;
@@ -23,11 +24,14 @@ public sealed class HandledMessageLog(NotificationsDbContext context, TimeProvid
         {
             await context.SaveChangesAsync(cancellationToken);
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException exception) when (IsDuplicateKey(exception))
         {
-            // The composite key is the only constraint here, so this is another instance having sent
-            // it between the check and now. The message is delivered either way and the row stands.
+            // Another instance sent this between the check and now, so the row already says so.
             context.ChangeTracker.Clear();
         }
     }
+
+    // 2627 is a primary key violation and 2601 a unique index one; this table's key can raise either.
+    private static bool IsDuplicateKey(DbUpdateException exception) =>
+        exception.InnerException is SqlException { Number: 2627 or 2601 };
 }
