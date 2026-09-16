@@ -80,9 +80,10 @@ public sealed class AppointmentReminderNotification(
             return;
         }
 
+        // Not "tomorrow": the sweep's lead time is configurable and a same-day booking is reminded now.
         await sender.SendAsync(
             patient,
-            "Your appointment is tomorrow",
+            "Your appointment is coming up",
             $"A reminder that you are booked for {integrationEvent.Start:f} UTC.",
             cancellationToken);
 

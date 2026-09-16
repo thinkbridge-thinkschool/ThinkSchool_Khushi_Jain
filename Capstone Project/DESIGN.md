@@ -59,9 +59,10 @@ stamped abandoned rather than processed, so it stops being retried without ever 
 1. **Confirmation** — `Book` raises `AppointmentBooked` → outbox → Notifications looks up the contact
    through `IPatientDirectory` and sends it.
 2. **Cancellation** — `Cancel` raises `AppointmentCancelled` → outbox → Notifications tells the patient.
-3. **Day-before reminder** — a scheduled job sweeps tomorrow's schedules and calls
+3. **Reminder** — a scheduled job sweeps every schedule from today out to the lead time and calls
    `MarkRemindersDue`, which raises one `AppointmentReminderDue` per due appointment and stamps it so
-   it fires once → outbox → Notifications sends it.
+   it fires once → outbox → Notifications sends it. The range matters: an appointment booked for
+   later the same day is due a reminder immediately, and sweeping only the far date would miss it.
 
 Delivery is at-least-once, so handlers are idempotent: Notifications keeps a `handled_messages` table
 keyed on the appointment id and the message kind, checks it before sending, and writes to it after. A

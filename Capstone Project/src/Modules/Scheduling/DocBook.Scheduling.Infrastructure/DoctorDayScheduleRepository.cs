@@ -39,14 +39,15 @@ public sealed class DoctorDayScheduleRepository(
             .FirstOrDefaultAsync(schedule => schedule.Id == id, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<DoctorDaySchedule>> PageByDateAsync(
-        DateOnly date,
+    public async Task<IReadOnlyList<DoctorDaySchedule>> PageByDateRangeAsync(
+        DateOnly from,
+        DateOnly to,
         int skip,
         int take,
         CancellationToken cancellationToken) =>
         await context.Schedules
             .Include(schedule => schedule.Appointments)
-            .Where(schedule => schedule.Date == date)
+            .Where(schedule => schedule.Date >= from && schedule.Date <= to)
             .OrderBy(schedule => schedule.Id)
             .Skip(skip)
             .Take(take)

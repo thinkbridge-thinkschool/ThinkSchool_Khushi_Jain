@@ -11,13 +11,18 @@ public sealed class SweepRemindersHandler(IDoctorDayScheduleRepository schedules
         CancellationToken cancellationToken)
     {
         var now = clock.GetUtcNow();
-        var date = DateOnly.FromDateTime(now.Add(leadTime).UtcDateTime);
+
+        // The whole range, not the far end of it: an appointment booked for this afternoon is due
+        // a reminder now, and a sweep that only ever loads one date never hands it to the aggregate.
+        var from = DateOnly.FromDateTime(now.UtcDateTime);
+        var to = DateOnly.FromDateTime(now.Add(leadTime).UtcDateTime);
+
         var swept = 0;
         var skip = 0;
 
         while (true)
         {
-            var page = await schedules.PageByDateAsync(date, skip, pageSize, cancellationToken);
+            var page = await schedules.PageByDateRangeAsync(from, to, skip, pageSize, cancellationToken);
 
             if (page.Count == 0)
             {
