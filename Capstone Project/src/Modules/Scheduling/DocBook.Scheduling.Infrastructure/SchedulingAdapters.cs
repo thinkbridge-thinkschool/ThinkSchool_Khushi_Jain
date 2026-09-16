@@ -28,7 +28,9 @@ public sealed class SchedulingOutboxStore(SchedulingDbContext context, TimeProvi
         WITH pending AS (
             SELECT TOP ({0}) *
             FROM [{{SchedulingDbContext.Schema}}].[outbox_messages] WITH (ROWLOCK, READPAST, UPDLOCK)
-            WHERE [ProcessedAt] IS NULL AND ([ClaimedUntil] IS NULL OR [ClaimedUntil] < {1})
+            WHERE [ProcessedAt] IS NULL
+              AND [AbandonedAt] IS NULL
+              AND ([ClaimedUntil] IS NULL OR [ClaimedUntil] < {1})
             ORDER BY [OccurredAt]
         )
         UPDATE pending SET [ClaimedUntil] = {2}, [ClaimedBy] = {3}

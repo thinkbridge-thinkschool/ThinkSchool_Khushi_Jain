@@ -17,9 +17,15 @@ public static class SharedTables
             outbox.Property(message => message.Payload).IsRequired();
             outbox.Property(message => message.LastFailure).HasMaxLength(MaxTypeNameLength);
 
-            // The dispatcher only ever asks for unclaimed, unprocessed rows, oldest first.
+            // The dispatcher only ever asks for unclaimed rows it has neither sent nor given up on.
             outbox
-                .HasIndex(message => new { message.ProcessedAt, message.ClaimedUntil, message.OccurredAt })
+                .HasIndex(message => new
+                {
+                    message.ProcessedAt,
+                    message.AbandonedAt,
+                    message.ClaimedUntil,
+                    message.OccurredAt
+                })
                 .HasDatabaseName("ix_outbox_messages_pending");
         });
     }

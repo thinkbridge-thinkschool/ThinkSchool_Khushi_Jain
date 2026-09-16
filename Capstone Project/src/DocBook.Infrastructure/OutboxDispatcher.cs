@@ -78,22 +78,22 @@ public sealed class OutboxDispatcher(
                 // The type, not the text, which a handler is free to build from the payload.
                 message.LastFailure = exception.GetType().Name;
 
-                // The claim is left to expire, which is where the wait before a retry comes from.
-
                 logger.LogError(
                     "Outbox message {MessageId} failed on attempt {Attempt} with {Failure}.",
                     message.Id,
                     message.Attempts,
                     message.LastFailure);
 
+                // Otherwise the claim is left to expire, which is the wait before the next attempt.
                 if (message.Attempts >= _options.MaxAttempts)
                 {
-                    message.ProcessedAt = DateTimeOffset.UtcNow;
+                    message.AbandonedAt = DateTimeOffset.UtcNow;
 
                     logger.LogError(
-                        "Outbox message {MessageId} abandoned after {Attempts} attempts.",
+                        "Outbox message {MessageId} abandoned after {Attempts} attempts, last failure {Failure}.",
                         message.Id,
-                        message.Attempts);
+                        message.Attempts,
+                        message.LastFailure);
                 }
             }
         }

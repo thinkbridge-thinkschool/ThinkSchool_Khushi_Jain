@@ -53,7 +53,8 @@ Aggregates raise **domain events**, handled inside Scheduling in the same transa
 write **integration events** to a transactional outbox in the `scheduling` schema — same transaction
 as the booking, so nothing is lost if the process dies. A background dispatcher then delivers them,
 claiming each batch on a short lease first so two instances never work the same row and an instance
-that dies hands its rows back when the lease expires.
+that dies hands its rows back when the lease expires. A message it gives up on after five attempts is
+stamped abandoned rather than processed, so it stops being retried without ever reading as delivered.
 
 1. **Confirmation** — `Book` raises `AppointmentBooked` → outbox → Notifications looks up the contact
    through `IPatientDirectory` and sends it.
@@ -125,6 +126,8 @@ Running needs SQL Server and two environment variables; the steps are in
 - Times are UTC. Local opening hours across a daylight-saving change need a real time zone.
 - An appointment cannot cross midnight, because the aggregate is one doctor for one date.
 - The outbox is polled, so a confirmation lands seconds after the booking.
+- An abandoned message is found by querying the outbox table. Nothing alerts on one, and nothing
+  replays it.
 - `IPatientDirectory` is a synchronous call from Scheduling into Patients — the one request-time
   coupling between modules.
 - Clinic staff is one account from configuration, so every member of staff shares an actor id.
