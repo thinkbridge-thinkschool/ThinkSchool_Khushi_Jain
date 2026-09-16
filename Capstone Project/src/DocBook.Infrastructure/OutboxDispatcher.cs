@@ -14,9 +14,13 @@ public sealed class OutboxOptions
     public TimeSpan PollInterval { get; init; } = TimeSpan.FromSeconds(10);
 
     public int MaxAttempts { get; init; } = 5;
+
+    // Long enough for a slow delivery, short enough that a killed instance's work resumes soon.
+    public TimeSpan ClaimDuration { get; init; } = TimeSpan.FromMinutes(2);
 }
 
-// Delivery is at least once, so a message redelivered after a crash is the handler's problem.
+// Delivery is at least once. The claim keeps two instances off one row; the handled-message
+// table in Notifications is what makes the redelivery this still allows harmless.
 public sealed class OutboxDispatcher(
     IServiceScopeFactory scopes,
     IntegrationEventTypeMap types,
@@ -54,7 +58,10 @@ public sealed class OutboxDispatcher(
         using var scope = scopes.CreateScope();
 
         var store = scope.ServiceProvider.GetRequiredService<IOutboxStore>();
-        var pending = await store.TakePendingAsync(_options.BatchSize, cancellationToken);
+        var pending = await store.ClaimPendingAsync(
+            _options.BatchSize,
+            _options.ClaimDuration,
+            cancellationToken);
 
         foreach (var message in pending)
         {
@@ -70,6 +77,8 @@ public sealed class OutboxDispatcher(
             {
                 // The type, not the text, which a handler is free to build from the payload.
                 message.LastFailure = exception.GetType().Name;
+
+                // The claim is left to expire, which is where the wait before a retry comes from.
 
                 logger.LogError(
                     "Outbox message {MessageId} failed on attempt {Attempt} with {Failure}.",

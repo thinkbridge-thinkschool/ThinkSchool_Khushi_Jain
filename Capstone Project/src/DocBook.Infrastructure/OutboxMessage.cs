@@ -17,4 +17,9 @@ public sealed class OutboxMessage
 
     // The failure's type, never its text, which is free to quote the payload it choked on.
     public string? LastFailure { get; set; }
+
+    // A lease rather than a lock, so an instance that dies mid-delivery strands nothing.
+    public DateTimeOffset? ClaimedUntil { get; set; }
+
+    public Guid? ClaimedBy { get; set; }
 }

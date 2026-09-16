@@ -51,7 +51,9 @@ the appointments table directly.
 
 Aggregates raise **domain events**, handled inside Scheduling in the same transaction. Those handlers
 write **integration events** to a transactional outbox in the `scheduling` schema — same transaction
-as the booking, so nothing is lost if the process dies. A background dispatcher then delivers them.
+as the booking, so nothing is lost if the process dies. A background dispatcher then delivers them,
+claiming each batch on a short lease first so two instances never work the same row and an instance
+that dies hands its rows back when the lease expires.
 
 1. **Confirmation** — `Book` raises `AppointmentBooked` → outbox → Notifications looks up the contact
    through `IPatientDirectory` and sends it.

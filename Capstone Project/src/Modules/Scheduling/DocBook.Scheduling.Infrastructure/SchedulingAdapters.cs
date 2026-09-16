@@ -21,16 +21,37 @@ public sealed class OutboxIntegrationEventPublisher(
         });
 }
 
-public sealed class SchedulingOutboxStore(SchedulingDbContext context) : IOutboxStore
+public sealed class SchedulingOutboxStore(SchedulingDbContext context, TimeProvider clock) : IOutboxStore
 {
-    public async Task<IReadOnlyList<OutboxMessage>> TakePendingAsync(
+    // READPAST is the whole point: a second instance skips rows this one holds rather than waiting.
+    private const string ClaimSql = $$"""
+        WITH pending AS (
+            SELECT TOP ({0}) *
+            FROM [{{SchedulingDbContext.Schema}}].[outbox_messages] WITH (ROWLOCK, READPAST, UPDLOCK)
+            WHERE [ProcessedAt] IS NULL AND ([ClaimedUntil] IS NULL OR [ClaimedUntil] < {1})
+            ORDER BY [OccurredAt]
+        )
+        UPDATE pending SET [ClaimedUntil] = {2}, [ClaimedBy] = {3}
+        """;
+
+    public async Task<IReadOnlyList<OutboxMessage>> ClaimPendingAsync(
         int batchSize,
-        CancellationToken cancellationToken) =>
-        await context.Outbox
-            .Where(message => message.ProcessedAt == null)
+        TimeSpan claimDuration,
+        CancellationToken cancellationToken)
+    {
+        var now = clock.GetUtcNow();
+        var claimant = Guid.CreateVersion7();
+
+        await context.Database.ExecuteSqlRawAsync(
+            ClaimSql,
+            [batchSize, now, now + claimDuration, claimant],
+            cancellationToken);
+
+        return await context.Outbox
+            .Where(message => message.ClaimedBy == claimant)
             .OrderBy(message => message.OccurredAt)
-            .Take(batchSize)
             .ToListAsync(cancellationToken);
+    }
 
     public Task SaveAsync(CancellationToken cancellationToken) =>
         context.SaveChangesAsync(cancellationToken);
