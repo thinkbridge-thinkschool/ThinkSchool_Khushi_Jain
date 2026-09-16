@@ -13,14 +13,14 @@ public sealed class OutboxOptions
 
     public TimeSpan PollInterval { get; init; } = TimeSpan.FromSeconds(10);
 
+    // Reached after roughly MaxAttempts × ClaimDuration, not on consecutive polls.
     public int MaxAttempts { get; init; } = 5;
 
-    // Long enough for a slow delivery, short enough that a killed instance's work resumes soon.
+    // How long one instance may hold a row, and therefore the wait before a failed message is retried.
     public TimeSpan ClaimDuration { get; init; } = TimeSpan.FromMinutes(2);
 }
 
-// Delivery is at least once. The claim keeps two instances off one row; the handled-message
-// table in Notifications is what makes the redelivery this still allows harmless.
+// Delivery is at least once; the handled-message table in Notifications is what makes that harmless.
 public sealed class OutboxDispatcher(
     IServiceScopeFactory scopes,
     IntegrationEventTypeMap types,
