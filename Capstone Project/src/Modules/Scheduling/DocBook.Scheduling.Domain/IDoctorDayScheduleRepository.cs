@@ -7,8 +7,9 @@ public interface IDoctorDayScheduleRepository
     Task<DoctorDaySchedule?> FindByAppointmentAsync(AppointmentId appointmentId, CancellationToken cancellationToken);
 
     // Paged, because a whole-clinic sweep is otherwise bounded only by how long the clinic has run.
-    Task<IReadOnlyList<DoctorDaySchedule>> PageByDateAsync(
-        DateOnly date,
+    Task<IReadOnlyList<DoctorDaySchedule>> PageByDateRangeAsync(
+        DateOnly from,
+        DateOnly to,
         int skip,
         int take,
         CancellationToken cancellationToken);

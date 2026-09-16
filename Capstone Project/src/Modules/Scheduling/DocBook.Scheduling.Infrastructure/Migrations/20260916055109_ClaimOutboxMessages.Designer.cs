@@ -5,6 +5,7 @@ using DocBook.Scheduling.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -12,9 +13,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DocBook.Scheduling.Infrastructure.Migrations
 {
     [DbContext(typeof(SchedulingDbContext))]
-    partial class SchedulingDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260916055109_ClaimOutboxMessages")]
+    partial class ClaimOutboxMessages
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -62,9 +65,6 @@ namespace DocBook.Scheduling.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateTimeOffset?>("AbandonedAt")
-                        .HasColumnType("datetimeoffset");
-
                     b.Property<int>("Attempts")
                         .HasColumnType("int");
 
@@ -95,7 +95,7 @@ namespace DocBook.Scheduling.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ProcessedAt", "AbandonedAt", "ClaimedUntil", "OccurredAt")
+                    b.HasIndex("ProcessedAt", "ClaimedUntil", "OccurredAt")
                         .HasDatabaseName("ix_outbox_messages_pending");
 
                     b.ToTable("outbox_messages", "scheduling");

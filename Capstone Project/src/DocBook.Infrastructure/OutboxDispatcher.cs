@@ -13,10 +13,14 @@ public sealed class OutboxOptions
 
     public TimeSpan PollInterval { get; init; } = TimeSpan.FromSeconds(10);
 
+    // Reached after roughly MaxAttempts × ClaimDuration, not on consecutive polls.
     public int MaxAttempts { get; init; } = 5;
+
+    // How long one instance may hold a row, and therefore the wait before a failed message is retried.
+    public TimeSpan ClaimDuration { get; init; } = TimeSpan.FromMinutes(2);
 }
 
-// Delivery is at least once, so a message redelivered after a crash is the handler's problem.
+// Delivery is at least once; the handled-message table in Notifications is what makes that harmless.
 public sealed class OutboxDispatcher(
     IServiceScopeFactory scopes,
     IntegrationEventTypeMap types,
@@ -54,7 +58,10 @@ public sealed class OutboxDispatcher(
         using var scope = scopes.CreateScope();
 
         var store = scope.ServiceProvider.GetRequiredService<IOutboxStore>();
-        var pending = await store.TakePendingAsync(_options.BatchSize, cancellationToken);
+        var pending = await store.ClaimPendingAsync(
+            _options.BatchSize,
+            _options.ClaimDuration,
+            cancellationToken);
 
         foreach (var message in pending)
         {
@@ -77,14 +84,16 @@ public sealed class OutboxDispatcher(
                     message.Attempts,
                     message.LastFailure);
 
+                // Otherwise the claim is left to expire, which is the wait before the next attempt.
                 if (message.Attempts >= _options.MaxAttempts)
                 {
-                    message.ProcessedAt = DateTimeOffset.UtcNow;
+                    message.AbandonedAt = DateTimeOffset.UtcNow;
 
                     logger.LogError(
-                        "Outbox message {MessageId} abandoned after {Attempts} attempts.",
+                        "Outbox message {MessageId} abandoned after {Attempts} attempts, last failure {Failure}.",
                         message.Id,
-                        message.Attempts);
+                        message.Attempts,
+                        message.LastFailure);
                 }
             }
         }

@@ -13,9 +13,9 @@ one ever has to move out.
 | --- | --- | --- |
 | **Scheduling** | Doctor day schedules, appointments, the booking rules | Publishes integration events |
 | **Patients** | Patient identity and contact details | Exposes `IPatientDirectory` in its contracts |
-| **Notifications** | Confirmations and reminders | Consumes Scheduling's events, publishes none |
+| **Notifications** | Confirmations and reminders, and the log of which have been sent | Consumes Scheduling's events, publishes none |
 
-Each context owns its own schema — `scheduling`, `patients` — and no query crosses one. `PatientId`
+Each context owns its own schema — `scheduling`, `patients`, `notifications` — and no query crosses one. `PatientId`
 is a separate type in each: Scheduling stores a reference, Patients owns the record behind it.
 
 ## Core aggregate: DoctorDaySchedule
@@ -51,17 +51,26 @@ the appointments table directly.
 
 Aggregates raise **domain events**, handled inside Scheduling in the same transaction. Those handlers
 write **integration events** to a transactional outbox in the `scheduling` schema — same transaction
-as the booking, so nothing is lost if the process dies. A background dispatcher then delivers them.
+as the booking, so nothing is lost if the process dies. A background dispatcher then delivers them,
+claiming each batch on a short lease first so two instances never work the same row and an instance
+that dies hands its rows back when the lease expires. A message it gives up on after five attempts is
+stamped abandoned rather than processed, so it stops being retried without ever reading as delivered.
 
 1. **Confirmation** — `Book` raises `AppointmentBooked` → outbox → Notifications looks up the contact
    through `IPatientDirectory` and sends it.
 2. **Cancellation** — `Cancel` raises `AppointmentCancelled` → outbox → Notifications tells the patient.
-3. **Day-before reminder** — a scheduled job sweeps tomorrow's schedules and calls
+3. **Reminder** — a scheduled job sweeps every schedule from today out to the lead time and calls
    `MarkRemindersDue`, which raises one `AppointmentReminderDue` per due appointment and stamps it so
-   it fires once → outbox → Notifications sends it.
+   it fires once → outbox → Notifications sends it. The range matters: an appointment booked for
+   later the same day is due a reminder immediately, and sweeping only the far date would miss it.
 
-Delivery is at-least-once, so handlers are idempotent: Notifications keys on the appointment id and
-the message kind.
+Delivery is at-least-once, so handlers are idempotent: Notifications keeps a `handled_messages` table
+keyed on the appointment id and the message kind, checks it before sending, and writes to it after. A
+redelivered message finds the row and stops.
+
+Sending is Azure Communication Services when `Notifications:Email` is configured, and a log line
+otherwise. Which one is in play is decided at startup, so a deployment that means to send email
+cannot quietly write to the log instead.
 
 ## Scaffolded solution layout
 
@@ -85,13 +94,13 @@ src/
       DocBook.Patients.Infrastructure/     EF Core mapping, repository, endpoints
     Notifications/
       DocBook.Notifications.Application/   handlers for Scheduling's integration events
-      DocBook.Notifications.Infrastructure/ the sender, module registration
+      DocBook.Notifications.Infrastructure/ the sender, the handled-message log, module registration
 tests/
   DocBook.Scheduling.Domain.Tests/         the aggregate's invariants, no database
 ```
 
-Both modules that own data map to one SQL Server database, each into its own schema and with its own
-migration history table. `DocBook.Api` applies both migration sets at startup.
+All three modules map to one SQL Server database, each into its own schema and with its own migration
+history table. `DocBook.Api` applies all three migration sets at startup.
 
 Every route but `/health` needs a bearer token. The caller's identity is built from that token and
 passed to the handlers as an `Actor`, so no use case takes an identity from a request body. There are
@@ -122,6 +131,13 @@ Running needs SQL Server and two environment variables; the steps are in
 - Times are UTC. Local opening hours across a daylight-saving change need a real time zone.
 - An appointment cannot cross midnight, because the aggregate is one doctor for one date.
 - The outbox is polled, so a confirmation lands seconds after the booking.
+- An abandoned message is found by querying the outbox table. Nothing alerts on one, and nothing
+  replays it.
+- Email goes out from an Azure-managed domain, so the sender is a `DoNotReply@…azurecomm.net` address
+  and the send rate is capped. A real clinic would verify its own domain.
+- A send is handed to Communication Services and not waited on, so the outbox retries a request that
+  was refused but not a delivery that fails afterwards. The operation id in the log is the only way
+  to find one of those, in Azure rather than here.
 - `IPatientDirectory` is a synchronous call from Scheduling into Patients — the one request-time
   coupling between modules.
 - Clinic staff is one account from configuration, so every member of staff shares an actor id.

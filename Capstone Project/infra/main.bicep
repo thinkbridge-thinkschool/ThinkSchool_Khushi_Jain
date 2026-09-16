@@ -22,6 +22,9 @@ param deployApplication bool = true
 @description('One address let through the SQL firewall, for an API run outside Azure')
 param developerIpAddress string = ''
 
+@description('Where Communication Services keeps email data, which is not always where it is sent from')
+param emailDataLocation string = 'United States'
+
 var resourceToken = uniqueString(resourceGroup().id, applicationName)
 var databaseName = 'docbook'
 var apiSiteName = 'app-${applicationName}-${resourceToken}'
@@ -105,6 +108,36 @@ resource developerAccess 'Microsoft.Sql/servers/firewallRules@2023-08-01-preview
   properties: {
     startIpAddress: developerIpAddress
     endIpAddress: developerIpAddress
+  }
+}
+
+// Not gated on deployApplication: an API running outside Azure still has patients to write to.
+resource emailService 'Microsoft.Communication/emailServices@2023-04-01' = {
+  name: 'acsmail-${applicationName}-${resourceToken}'
+  location: 'global'
+  properties: {
+    dataLocation: emailDataLocation
+  }
+}
+
+// Azure owns the domain, so nothing has to be proved with a DNS record before the first send.
+resource managedDomain 'Microsoft.Communication/emailServices/domains@2023-04-01' = {
+  parent: emailService
+  name: 'AzureManagedDomain'
+  location: 'global'
+  properties: {
+    domainManagement: 'AzureManaged'
+    userEngagementTracking: 'Disabled'
+  }
+}
+
+// Billed per message, so this and the two above cost nothing while no appointment is booked.
+resource communicationService 'Microsoft.Communication/communicationServices@2023-04-01' = {
+  name: 'acs-${applicationName}-${resourceToken}'
+  location: 'global'
+  properties: {
+    dataLocation: emailDataLocation
+    linkedDomains: [managedDomain.id]
   }
 }
 
@@ -236,3 +269,5 @@ output apiHostName string = api.?properties.defaultHostName ?? ''
 output sqlServerFullyQualifiedDomainName string = sqlServer.properties.fullyQualifiedDomainName
 output sqlDatabaseName string = database.name
 output keyVaultName string = deployApplication ? keyVaultName : ''
+output communicationServiceName string = communicationService.name
+output notificationFromAddress string = 'DoNotReply@${managedDomain.properties.mailFromSenderDomain}'

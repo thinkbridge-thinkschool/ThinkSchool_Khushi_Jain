@@ -40,7 +40,7 @@ builder.Services.AddScoped<TokenService>();
 // The whole composition root: one deployable, three modules, each behind its own registration.
 builder.Services.AddScheduling(builder.Configuration);
 builder.Services.AddPatients(builder.Configuration);
-builder.Services.AddNotifications();
+builder.Services.AddNotifications(builder.Configuration);
 
 var app = builder.Build();
 

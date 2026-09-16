@@ -1,3 +1,4 @@
+using DocBook.Notifications.Infrastructure;
 using DocBook.Patients.Infrastructure;
 using DocBook.Scheduling.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -13,5 +14,6 @@ public static class DatabaseExtensions
 
         await scope.ServiceProvider.GetRequiredService<PatientsDbContext>().Database.MigrateAsync();
         await scope.ServiceProvider.GetRequiredService<SchedulingDbContext>().Database.MigrateAsync();
+        await scope.ServiceProvider.GetRequiredService<NotificationsDbContext>().Database.MigrateAsync();
     }
 }
