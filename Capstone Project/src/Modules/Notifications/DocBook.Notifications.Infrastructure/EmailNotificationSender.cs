@@ -20,9 +20,13 @@ public sealed class EmailNotificationSender(
             new EmailContent(subject) { PlainText = body });
 
         // Started rather than Completed: the outbox already owns the retry, and waiting would hold the claim.
-        await client.SendAsync(WaitUntil.Started, message, cancellationToken);
+        var operation = await client.SendAsync(WaitUntil.Started, message, cancellationToken);
 
-        // The recipient's address is the patient's, so only their id goes in the log line.
-        logger.LogInformation("Notification {Subject} sent for patient {PatientId}.", subject, recipient.PatientId);
+        // Accepted, not delivered, so the operation id is the only handle on a send that fails later.
+        logger.LogInformation(
+            "Notification {Subject} accepted for patient {PatientId} as operation {OperationId}.",
+            subject,
+            recipient.PatientId,
+            operation.Id);
     }
 }

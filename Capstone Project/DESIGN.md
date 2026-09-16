@@ -135,6 +135,9 @@ Running needs SQL Server and two environment variables; the steps are in
   replays it.
 - Email goes out from an Azure-managed domain, so the sender is a `DoNotReply@…azurecomm.net` address
   and the send rate is capped. A real clinic would verify its own domain.
+- A send is handed to Communication Services and not waited on, so the outbox retries a request that
+  was refused but not a delivery that fails afterwards. The operation id in the log is the only way
+  to find one of those, in Azure rather than here.
 - `IPatientDirectory` is a synchronous call from Scheduling into Patients — the one request-time
   coupling between modules.
 - Clinic staff is one account from configuration, so every member of staff shares an actor id.
