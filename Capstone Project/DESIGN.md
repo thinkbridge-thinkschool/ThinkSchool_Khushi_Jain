@@ -68,6 +68,10 @@ Delivery is at-least-once, so handlers are idempotent: Notifications keeps a `ha
 keyed on the appointment id and the message kind, checks it before sending, and writes to it after. A
 redelivered message finds the row and stops.
 
+Sending is Azure Communication Services when `Notifications:Email` is configured, and a log line
+otherwise. Which one is in play is decided at startup, so a deployment that means to send email
+cannot quietly write to the log instead.
+
 ## Scaffolded solution layout
 
 ```
@@ -129,6 +133,8 @@ Running needs SQL Server and two environment variables; the steps are in
 - The outbox is polled, so a confirmation lands seconds after the booking.
 - An abandoned message is found by querying the outbox table. Nothing alerts on one, and nothing
   replays it.
+- Email goes out from an Azure-managed domain, so the sender is a `DoNotReply@…azurecomm.net` address
+  and the send rate is capped. A real clinic would verify its own domain.
 - `IPatientDirectory` is a synchronous call from Scheduling into Patients — the one request-time
   coupling between modules.
 - Clinic staff is one account from configuration, so every member of staff shares an actor id.

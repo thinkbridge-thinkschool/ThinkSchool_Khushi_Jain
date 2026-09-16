@@ -8,7 +8,8 @@ STAFF_EMAIL="${STAFF_EMAIL:-desk@docbook.example}"
 STAFF_PASSWORD="${STAFF_PASSWORD:?set STAFF_PASSWORD to the password behind Staff:PasswordHash}"
 
 # A fresh patient each run, because registering an address that is already taken creates nothing.
-PATIENT_EMAIL="patient-$(date -u +%s)@docbook.example"
+# Override it with a real address to watch the confirmation arrive.
+PATIENT_EMAIL="${PATIENT_EMAIL:-patient-$(date -u +%s)@docbook.example}"
 PATIENT_PASSWORD="$(openssl rand -base64 18)"
 
 # There is no doctor aggregate, so any id names a doctor the clinic can open a day for.
