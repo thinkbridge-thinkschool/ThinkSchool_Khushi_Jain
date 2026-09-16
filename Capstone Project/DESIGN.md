@@ -13,9 +13,9 @@ one ever has to move out.
 | --- | --- | --- |
 | **Scheduling** | Doctor day schedules, appointments, the booking rules | Publishes integration events |
 | **Patients** | Patient identity and contact details | Exposes `IPatientDirectory` in its contracts |
-| **Notifications** | Confirmations and reminders | Consumes Scheduling's events, publishes none |
+| **Notifications** | Confirmations and reminders, and the log of which have been sent | Consumes Scheduling's events, publishes none |
 
-Each context owns its own schema — `scheduling`, `patients` — and no query crosses one. `PatientId`
+Each context owns its own schema — `scheduling`, `patients`, `notifications` — and no query crosses one. `PatientId`
 is a separate type in each: Scheduling stores a reference, Patients owns the record behind it.
 
 ## Core aggregate: DoctorDaySchedule
@@ -60,8 +60,9 @@ as the booking, so nothing is lost if the process dies. A background dispatcher 
    `MarkRemindersDue`, which raises one `AppointmentReminderDue` per due appointment and stamps it so
    it fires once → outbox → Notifications sends it.
 
-Delivery is at-least-once, so handlers are idempotent: Notifications keys on the appointment id and
-the message kind.
+Delivery is at-least-once, so handlers are idempotent: Notifications keeps a `handled_messages` table
+keyed on the appointment id and the message kind, checks it before sending, and writes to it after. A
+redelivered message finds the row and stops.
 
 ## Scaffolded solution layout
 
@@ -85,13 +86,13 @@ src/
       DocBook.Patients.Infrastructure/     EF Core mapping, repository, endpoints
     Notifications/
       DocBook.Notifications.Application/   handlers for Scheduling's integration events
-      DocBook.Notifications.Infrastructure/ the sender, module registration
+      DocBook.Notifications.Infrastructure/ the sender, the handled-message log, module registration
 tests/
   DocBook.Scheduling.Domain.Tests/         the aggregate's invariants, no database
 ```
 
-Both modules that own data map to one SQL Server database, each into its own schema and with its own
-migration history table. `DocBook.Api` applies both migration sets at startup.
+All three modules map to one SQL Server database, each into its own schema and with its own migration
+history table. `DocBook.Api` applies all three migration sets at startup.
 
 Every route but `/health` needs a bearer token. The caller's identity is built from that token and
 passed to the handlers as an `Actor`, so no use case takes an identity from a request body. There are
