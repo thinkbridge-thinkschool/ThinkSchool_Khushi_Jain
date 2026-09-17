@@ -57,3 +57,47 @@ jobs:
           name: coverage-report
           path: TestResults/**/coverage.cobertura.xml
           retention-days: 14
+
+  docbook:
+    # The capstone is its own solution with its own coverage settings, so it gets its own gate.
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore dependencies
+        run: dotnet restore "Capstone Project/DocBook.slnx"
+
+      - name: Build
+        run: dotnet build "Capstone Project/DocBook.slnx" --no-restore
+
+      - name: Run tests with coverage
+        run: >-
+          dotnet test "Capstone Project/DocBook.slnx"
+          --no-build
+          --logger "trx;LogFileName=docbook-test-results.trx"
+          --results-directory ./TestResults/DocBook
+          --collect:"XPlat Code Coverage"
+          --settings "Capstone Project/coverlet.runsettings"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docbook-test-results
+          path: TestResults/DocBook/**/*.trx
+          retention-days: 14
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docbook-coverage-report
+          path: TestResults/DocBook/**/coverage.cobertura.xml
+          retention-days: 14
