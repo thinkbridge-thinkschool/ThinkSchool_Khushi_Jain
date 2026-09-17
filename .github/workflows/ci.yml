@@ -60,6 +60,8 @@ jobs:
 
   docbook:
     # The capstone is its own solution with its own coverage settings, so it gets its own gate.
+    # ubuntu-latest ships a working Docker daemon, which is all Testcontainers needs to start the
+    # SQL Server 2022 container the DocBook.Api.Tests integration tests run against.
     runs-on: ubuntu-latest
 
     steps:

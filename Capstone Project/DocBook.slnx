@@ -15,4 +15,5 @@
   <Project Path="tests/DocBook.Scheduling.Domain.Tests/DocBook.Scheduling.Domain.Tests.csproj" />
   <Project Path="tests/DocBook.Patients.Domain.Tests/DocBook.Patients.Domain.Tests.csproj" />
   <Project Path="tests/DocBook.Application.Tests/DocBook.Application.Tests.csproj" />
+  <Project Path="tests/DocBook.Api.Tests/DocBook.Api.Tests.csproj" />
 </Solution>

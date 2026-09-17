@@ -64,3 +64,8 @@ app.MapPatientEndpoints();
 app.MapSchedulingEndpoints();
 
 app.Run();
+
+// Named, so a test host can start this exact pipeline rather than a rebuilt approximation of it.
+public partial class Program
+{
+}

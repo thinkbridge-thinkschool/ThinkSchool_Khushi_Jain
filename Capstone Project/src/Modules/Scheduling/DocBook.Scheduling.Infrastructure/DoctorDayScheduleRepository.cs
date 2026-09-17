@@ -18,26 +18,15 @@ public sealed class DoctorDayScheduleRepository(
                 schedule => schedule.DoctorId == doctorId && schedule.Date == date,
                 cancellationToken);
 
-    public async Task<DoctorDaySchedule?> FindByAppointmentAsync(
+    // Through the navigation: the shadow foreign key is a DoctorDayScheduleId, never a Guid.
+    public Task<DoctorDaySchedule?> FindByAppointmentAsync(
         AppointmentId appointmentId,
-        CancellationToken cancellationToken)
-    {
-        var scheduleId = await context.Appointments
-            .Where(appointment => appointment.Id == appointmentId)
-            .Select(appointment => EF.Property<Guid>(appointment, "ScheduleId"))
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (scheduleId == Guid.Empty)
-        {
-            return null;
-        }
-
-        var id = new DoctorDayScheduleId(scheduleId);
-
-        return await context.Schedules
+        CancellationToken cancellationToken) =>
+        context.Schedules
             .Include(schedule => schedule.Appointments)
-            .FirstOrDefaultAsync(schedule => schedule.Id == id, cancellationToken);
-    }
+            .FirstOrDefaultAsync(
+                schedule => schedule.Appointments.Any(booking => booking.Id == appointmentId),
+                cancellationToken);
 
     public async Task<IReadOnlyList<DoctorDaySchedule>> PageByDateRangeAsync(
         DateOnly from,
