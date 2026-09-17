@@ -13,4 +13,5 @@
   <Project Path="src/Modules/Notifications/DocBook.Notifications.Infrastructure/DocBook.Notifications.Infrastructure.csproj" />
   <Project Path="src/DocBook.Api/DocBook.Api.csproj" />
   <Project Path="tests/DocBook.Scheduling.Domain.Tests/DocBook.Scheduling.Domain.Tests.csproj" />
+  <Project Path="tests/DocBook.Patients.Domain.Tests/DocBook.Patients.Domain.Tests.csproj" />
 </Solution>
