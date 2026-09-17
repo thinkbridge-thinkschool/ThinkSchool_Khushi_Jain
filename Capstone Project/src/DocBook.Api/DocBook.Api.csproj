@@ -13,6 +13,9 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+
+    <!-- Pinned past GHSA-v5pm-xwqc-g5wc; Microsoft.AspNetCore.OpenApi still asks for 2.0.0. -->
+    <PackageReference Include="Microsoft.OpenApi" Version="2.7.5" />
   </ItemGroup>
 
   <ItemGroup>

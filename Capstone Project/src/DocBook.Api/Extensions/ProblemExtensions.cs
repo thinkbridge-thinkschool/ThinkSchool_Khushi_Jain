@@ -34,6 +34,8 @@ public static class ProblemExtensions
 
             var (status, title) = Describe(error);
 
+            // The only record a failed request leaves: this middleware's own error log is switched
+            // off in appsettings, because it logged a stack trace for every deliberate refusal too.
             if (status == StatusCodes.Status500InternalServerError)
             {
                 logger.LogError(error, "Unhandled request failure.");

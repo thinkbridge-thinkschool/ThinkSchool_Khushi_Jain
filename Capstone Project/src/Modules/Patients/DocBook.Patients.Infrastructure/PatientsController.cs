@@ -21,8 +21,9 @@ public sealed record RegisterPatientRequest(
     [property: StringLength(Patient.MaxEmailLength)]
     string Email,
 
+    // Optional, and nullable so that omitting it is a registration rather than a server error.
     [property: StringLength(Patient.MaxPhoneLength)]
-    string Phone,
+    string? Phone,
 
     [property: Required]
     [property: StringLength(128, MinimumLength = 12)]
@@ -50,7 +51,7 @@ public static class PatientsController
             CancellationToken cancellationToken) =>
         {
             await handler.HandleAsync(
-                new RegisterPatient(request.FullName, request.Email, request.Phone, request.Password),
+                new RegisterPatient(request.FullName, request.Email, request.Phone ?? string.Empty, request.Password),
                 cancellationToken);
 
             return Results.Accepted();

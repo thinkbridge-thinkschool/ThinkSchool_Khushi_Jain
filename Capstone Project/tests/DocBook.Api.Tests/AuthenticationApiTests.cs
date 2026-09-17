@@ -125,6 +125,25 @@ public class AuthenticationApiTests(DocBookApiFixture fixture)
         Assert.True(headers.CacheControl?.NoStore);
     }
 
+    // A phone number is optional, so leaving it out is a registration and not an unhandled path.
+    [Fact]
+    public async Task Registering_without_a_phone_number_is_accepted()
+    {
+        var email = ApiFlows.NewEmail();
+
+        var response = await fixture.Factory.Anonymous().PostAsJsonAsync("/api/v1/patients", new
+        {
+            fullName = "Ada Lovelace",
+            email,
+            password = ApiFlows.PatientPassword
+        });
+
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+
+        var token = await ApiFlows.TokenAsync(fixture.Factory.Anonymous(), email, ApiFlows.PatientPassword);
+        Assert.NotEmpty(token);
+    }
+
     [Fact]
     public async Task No_response_names_the_server_it_came_from()
     {
