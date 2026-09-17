@@ -51,6 +51,26 @@ public sealed class DocBookApiFixture : IAsyncLifetime
 
     // A host of its own, for a test that needs a setting the shared one deliberately relaxes.
     public WebApplicationFactory<Program> CreateHost(params (string Key, string Value)[] settings) =>
+        Build(settings, services =>
+        {
+            // Both are timers, and a timer firing mid-test is a test that fails on a slow machine.
+            services.RemoveHostedService<OutboxDispatcher>();
+            services.RemoveHostedService<ReminderSweepService>();
+        });
+
+    // The dispatcher left running, which is the only way the async path can be watched end to end.
+    public WebApplicationFactory<Program> CreateDispatchingHost(Action<IServiceCollection> configure) =>
+        Build(
+            [("Outbox:PollInterval", "00:00:01"), ("Outbox:ClaimDuration", "00:00:05")],
+            services =>
+            {
+                services.RemoveHostedService<ReminderSweepService>();
+                configure(services);
+            });
+
+    private WebApplicationFactory<Program> Build(
+        (string Key, string Value)[] settings,
+        Action<IServiceCollection> configure) =>
         new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Development");
@@ -69,12 +89,7 @@ public sealed class DocBookApiFixture : IAsyncLifetime
                 builder.UseSetting(key, value);
             }
 
-            builder.ConfigureTestServices(services =>
-            {
-                // Both are timers. The end-to-end test drains the outbox itself, on its own schedule.
-                services.RemoveHostedService<OutboxDispatcher>();
-                services.RemoveHostedService<ReminderSweepService>();
-            });
+            builder.ConfigureTestServices(configure);
         });
 }
 
