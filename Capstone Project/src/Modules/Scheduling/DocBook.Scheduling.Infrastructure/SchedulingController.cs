@@ -84,7 +84,7 @@ public static class SchedulingController
                 });
             }
 
-            var schedule = await schedules.FindAsync(new DoctorId(doctorId), date, cancellationToken);
+            var schedule = await schedules.FindForReadingAsync(new DoctorId(doctorId), date, cancellationToken);
 
             if (schedule is null)
             {

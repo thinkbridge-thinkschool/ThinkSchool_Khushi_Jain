@@ -29,6 +29,12 @@ internal sealed class FakeScheduleRepository : IDoctorDayScheduleRepository
             .FirstOrDefault(schedule => schedule.DoctorId == doctorId && schedule.Date == date));
     }
 
+    public Task<DoctorDaySchedule?> FindForReadingAsync(
+        DoctorId doctorId,
+        DateOnly date,
+        CancellationToken cancellationToken) =>
+        FindAsync(doctorId, date, cancellationToken);
+
     public Task<DoctorDaySchedule?> FindByAppointmentAsync(
         AppointmentId appointmentId,
         CancellationToken cancellationToken)

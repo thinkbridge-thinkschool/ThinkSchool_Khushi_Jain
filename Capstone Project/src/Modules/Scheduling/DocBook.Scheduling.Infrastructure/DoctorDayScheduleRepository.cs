@@ -18,6 +18,17 @@ public sealed class DoctorDayScheduleRepository(
                 schedule => schedule.DoctorId == doctorId && schedule.Date == date,
                 cancellationToken);
 
+    public Task<DoctorDaySchedule?> FindForReadingAsync(
+        DoctorId doctorId,
+        DateOnly date,
+        CancellationToken cancellationToken) =>
+        context.Schedules
+            .AsNoTracking()
+            .Include(schedule => schedule.Appointments)
+            .FirstOrDefaultAsync(
+                schedule => schedule.DoctorId == doctorId && schedule.Date == date,
+                cancellationToken);
+
     // Through the navigation: the shadow foreign key is a DoctorDayScheduleId, never a Guid.
     public Task<DoctorDaySchedule?> FindByAppointmentAsync(
         AppointmentId appointmentId,
