@@ -1,6 +1,6 @@
 # Day 31 — Polish: tests, perf, security
 
-Pull request: https://github.com/thinkbridge-thinkschool/ThinkSchool_Khushi_Jain/pull/2
+CI run: https://github.com/thinkbridge-thinkschool/ThinkSchool_Khushi_Jain/actions/runs/35205482902
 
 [DocBook](../Capstone%20Project/DESIGN.md) had six tests and no CI covering any of it. `ci.yml` built
 `ThinkSchool.slnx`, which lists no DocBook project, so the green check on yesterday's PR was about
@@ -24,7 +24,7 @@ tests need, because they start a real SQL Server.
 | Application | `Scheduling.Application` | 100% |
 | | `Patients.Application` | 100% |
 | | `Notifications.Application` | 100% |
-| Host and adapters | `DocBook.Api` | 96.2% |
+| Host and adapters | `DocBook.Api` | 96.7% |
 | | `DocBook.Infrastructure` | 97.4% |
 | | `Scheduling.Infrastructure` | 95.3% |
 | | `Patients.Infrastructure` | 94.5% |
