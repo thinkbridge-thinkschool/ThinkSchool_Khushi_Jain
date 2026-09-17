@@ -6,6 +6,16 @@
         <Configuration>
           <Format>cobertura</Format>
 
+          <!--
+            Checked per test project, and the narrowest one sets the floor: a run of the Patients
+            domain tests also instruments DocBook.SharedKernel, whose base classes only the layers
+            above exercise in full. That run sits at 65%, so the gate is 60 rather than the 70 the
+            solution as a whole clears comfortably.
+          -->
+          <Threshold>60</Threshold>
+          <ThresholdType>line</ThresholdType>
+          <ThresholdStat>total</ThresholdStat>
+
           <!-- EF Core writes these and they run at startup, so they read as covered without being tested. -->
           <ExcludeByFile>**/Migrations/*.cs</ExcludeByFile>
 

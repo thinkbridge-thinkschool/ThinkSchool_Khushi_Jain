@@ -97,6 +97,11 @@ src/
       DocBook.Notifications.Infrastructure/ the sender, the handled-message log, module registration
 tests/
   DocBook.Scheduling.Domain.Tests/         the aggregate's invariants, no database
+  DocBook.Patients.Domain.Tests/           Patient.Register, no database
+  DocBook.Application.Tests/               the use cases against fakes, all three modules
+  DocBook.Api.Tests/                       the real pipeline over a SQL Server container
+perf/
+  read-paths.js                            the k6 script the p99 figures come from
 ```
 
 All three modules map to one SQL Server database, each into its own schema and with its own migration
@@ -123,6 +128,9 @@ dotnet build "Capstone Project/DocBook.slnx"
 dotnet test "Capstone Project/DocBook.slnx"
 ```
 
+The tests need a Docker daemon: `DocBook.Api.Tests` starts a SQL Server container and runs the real
+pipeline against it.
+
 Running needs SQL Server and two environment variables; the steps are in
 [day27_security/README.md](../day27_security/README.md).
 
@@ -140,6 +148,9 @@ Running needs SQL Server and two environment variables; the steps are in
   to find one of those, in Azure rather than here.
 - `IPatientDirectory` is a synchronous call from Scheduling into Patients — the one request-time
   coupling between modules.
+- A patient's appointments are indexed on the patient alone, while the query also filters and orders
+  on the start time. SQL Server sorts what it seeks, which costs nothing at today's row counts and
+  will cost more as a patient accumulates history.
 - Clinic staff is one account from configuration, so every member of staff shares an actor id.
 - Access tokens only, so signing out means waiting for the token to expire.
 - A signed-in patient can read any doctor's free slots, which is also how they learn a doctor is busy.
