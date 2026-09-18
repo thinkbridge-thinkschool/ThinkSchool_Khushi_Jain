@@ -49,6 +49,10 @@ app.UseApiProblems();
 
 await app.MigrateAsync();
 
+// Ahead of authentication, so the page itself is public and every route it calls is not.
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.UseAuthentication();
 app.UseAuthorization();
 

@@ -2,7 +2,16 @@ namespace DocBook.Api.Extensions;
 
 public static class SecurityHeaderExtensions
 {
-    // A JSON API renders nothing and embeds nothing, so the policy it sends is the narrowest one.
+    // The page and the two files it pulls in. Every other path here answers with JSON.
+    private static readonly string[] PagePaths = ["/", "/index.html", "/app.css", "/app.js"];
+
+    // JSON renders nothing and embeds nothing, so the routes that serve it get the narrowest policy.
+    private const string ApiPolicy = "default-src 'none'; frame-ancestors 'none'";
+
+    // The page loads its own script and stylesheet and nothing else, inline script included.
+    private const string PagePolicy =
+        "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; frame-ancestors 'none'";
+
     public static WebApplication UseSecurityHeaders(this WebApplication app)
     {
         app.Use(async (context, next) =>
@@ -12,7 +21,7 @@ public static class SecurityHeaderExtensions
             headers["X-Content-Type-Options"] = "nosniff";
             headers["X-Frame-Options"] = "DENY";
             headers["Referrer-Policy"] = "no-referrer";
-            headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'";
+            headers["Content-Security-Policy"] = IsPage(context.Request.Path) ? PagePolicy : ApiPolicy;
             headers["Permissions-Policy"] = "geolocation=(), camera=(), microphone=()";
 
             // Nothing here is worth a shared cache holding, and some of it names a patient.
@@ -23,4 +32,7 @@ public static class SecurityHeaderExtensions
 
         return app;
     }
+
+    private static bool IsPage(PathString path) =>
+        PagePaths.Any(page => path.Equals(page, StringComparison.OrdinalIgnoreCase));
 }

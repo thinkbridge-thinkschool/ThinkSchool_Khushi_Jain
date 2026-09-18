@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DocBook</title>
+    <link rel="stylesheet" href="app.css">
+</head>
+
+<body>
+    <header>
+        <h1>DocBook</h1>
+        <p class="sub">Appointment booking</p>
+
+        <div id="identity" class="identity" hidden>
+            <span id="identity-name"></span>
+            <span id="identity-role" class="tag"></span>
+            <button id="sign-out" type="button" class="quiet">Sign out</button>
+        </div>
+    </header>
+
+    <p id="message" class="message" role="status"></p>
+
+    <main>
+        <section id="anonymous" class="gate">
+            <div id="sign-in-panel" class="panel card">
+                <h2>Sign in</h2>
+
+                <form id="sign-in-form" autocomplete="off">
+                    <label>Email
+                        <input id="sign-in-email" type="email" maxlength="256" required autocomplete="off">
+                    </label>
+
+                    <label>Password
+                        <input id="sign-in-password" type="password" maxlength="128" required
+                            autocomplete="new-password">
+                    </label>
+
+                    <button type="submit">Sign in</button>
+                </form>
+
+                <p class="switch">
+                    New here?
+                    <button id="show-register" type="button" class="link">Create an account</button>
+                </p>
+            </div>
+
+            <div id="register-panel" class="panel card" hidden>
+                <h2>Create an account</h2>
+
+                <form id="register-form" autocomplete="off">
+                    <label>Full name
+                        <input id="register-name" type="text" maxlength="200" required autocomplete="off">
+                    </label>
+
+                    <label>Email
+                        <input id="register-email" type="email" maxlength="256" required autocomplete="off">
+                    </label>
+
+                    <label>Phone <span class="hint">optional</span>
+                        <input id="register-phone" type="tel" maxlength="32" autocomplete="off">
+                    </label>
+
+                    <label>Password <span class="hint">at least 12 characters</span>
+                        <input id="register-password" type="password" minlength="12" maxlength="128" required
+                            autocomplete="new-password">
+                    </label>
+
+                    <button type="submit">Create account</button>
+                </form>
+
+                <p class="switch">
+                    Already registered?
+                    <button id="show-sign-in" type="button" class="link">Sign in</button>
+                </p>
+            </div>
+        </section>
+
+        <section id="day" class="panel" hidden>
+            <h2>Doctor and day</h2>
+            <p class="hint">These names are held by this page: DocBook stores no doctor records, only ids. Staff
+                open a day before anyone can book into it. Every time here is UTC.</p>
+
+            <div class="row">
+                <label>Doctor
+                    <select id="doctor"></select>
+                </label>
+
+                <label>Date
+                    <input id="date" type="date">
+                </label>
+            </div>
+        </section>
+
+        <section id="staff" class="panel" hidden>
+            <h2>Open the doctor's day</h2>
+
+            <form id="open-day-form" class="row" autocomplete="off">
+                <label>Opens at
+                    <input id="opens-at" type="time" value="09:00" required>
+                </label>
+
+                <label>Closes at
+                    <input id="closes-at" type="time" value="17:00" required>
+                </label>
+
+                <button type="submit">Open day</button>
+            </form>
+        </section>
+
+        <section id="slots" class="panel" hidden>
+            <h2>Free slots</h2>
+
+            <form id="slots-form" class="row" autocomplete="off">
+                <label>Minutes
+                    <input id="minutes" type="number" min="5" max="240" value="30">
+                </label>
+
+                <label>Reason
+                    <input id="reason" type="text" maxlength="500" value="Routine consultation">
+                </label>
+
+                <button type="submit">Find slots</button>
+            </form>
+
+            <ul id="slot-list" class="list"></ul>
+        </section>
+
+        <section id="appointments" class="panel" hidden>
+            <h2>My appointments</h2>
+
+            <button id="refresh-appointments" type="button" class="quiet">Refresh</button>
+
+            <ul id="appointment-list" class="list"></ul>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
