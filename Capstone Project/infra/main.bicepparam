@@ -12,3 +12,5 @@ param publicNetworkAccess = readEnvironmentVariable('DOCBOOK_PUBLIC_ACCESS', 'Di
 param deployApplication = bool(readEnvironmentVariable('DOCBOOK_DEPLOY_APPLICATION', 'true'))
 
 param developerIpAddress = readEnvironmentVariable('DOCBOOK_DEVELOPER_IP', '')
+
+param staffEmail = readEnvironmentVariable('DOCBOOK_STAFF_EMAIL', 'desk@docbook.example')

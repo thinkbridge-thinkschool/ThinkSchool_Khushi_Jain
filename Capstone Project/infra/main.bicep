@@ -22,6 +22,13 @@ param deployApplication bool = true
 @description('One address let through the SQL firewall, for an API run outside Azure')
 param developerIpAddress string = ''
 
+// Not a secret: it identifies the desk in the audit trail, and the password behind it is in the vault.
+@description('Actor id the single clinic desk account signs in as')
+param staffId string = '4f2c9a17-6b3e-4d81-9c05-2ae7f1b8d640'
+
+@description('Address the clinic desk signs in with')
+param staffEmail string = 'desk@docbook.example'
+
 @description('Where Communication Services keeps email data, which is not always where it is sent from')
 param emailDataLocation string = 'United States'
 
@@ -141,6 +148,7 @@ resource communicationService 'Microsoft.Communication/communicationServices@202
   }
 }
 
+// Holds Jwt--SigningKey, Staff--PasswordHash and Notifications--Email--ConnectionString, written after the first pass.
 resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = if (deployApplication) {
   name: keyVaultName
   location: location
@@ -191,6 +199,10 @@ resource api 'Microsoft.Web/sites@2023-12-01' = if (deployApplication) {
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
       http20Enabled: true
+
+      // The outbox dispatcher and the reminder sweep are hosted services, and an idle app unloads them.
+      alwaysOn: true
+
       appSettings: [
         {
           name: 'ASPNETCORE_ENVIRONMENT'
@@ -199,6 +211,22 @@ resource api 'Microsoft.Web/sites@2023-12-01' = if (deployApplication) {
         {
           name: 'KeyVault__Uri'
           value: keyVault.properties.vaultUri
+        }
+        {
+          name: 'Staff__Id'
+          value: staffId
+        }
+        {
+          name: 'Staff__Email'
+          value: staffEmail
+        }
+        {
+          name: 'Notifications__Email__Enabled'
+          value: 'true'
+        }
+        {
+          name: 'Notifications__Email__FromAddress'
+          value: 'DoNotReply@${managedDomain.properties.mailFromSenderDomain}'
         }
         // No password: the client fetches an Entra token for the app's own identity.
         {
