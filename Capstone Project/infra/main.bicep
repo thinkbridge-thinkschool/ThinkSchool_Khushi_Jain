@@ -165,6 +165,13 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = if (deployApplication
     networkAcls: {
       bypass: 'AzureServices'
       defaultAction: 'Deny'
+
+      // The exception the SQL firewall already gets: the secrets are written from outside the network.
+      ipRules: empty(developerIpAddress) ? [] : [
+        {
+          value: developerIpAddress
+        }
+      ]
     }
   }
 }
