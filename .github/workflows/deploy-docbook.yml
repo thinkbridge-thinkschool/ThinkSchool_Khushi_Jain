@@ -1,0 +1,100 @@
+name: Deploy DocBook
+
+# Only after the CI workflow has gone green on main, so the gate the polish day built is what ships.
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+# Two zip deploys landing on one app at once leaves it in whichever state finished last.
+concurrency:
+  group: deploy-docbook
+  cancel-in-progress: false
+
+env:
+  AZURE_RESOURCE_GROUP: rg-docbook
+  DEPLOYMENT_NAME: main
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout the commit CI tested
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Publish the API
+        run: |
+          dotnet publish "Capstone Project/src/DocBook.Api" \
+            --configuration Release \
+            --output publish
+          cd publish && zip -qr ../app.zip .
+
+      - name: Sign in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Read the site name from the deployment
+        run: |
+          output() {
+            az deployment group show \
+              --resource-group "$AZURE_RESOURCE_GROUP" \
+              --name "$DEPLOYMENT_NAME" \
+              --query "properties.outputs.$1.value" --output tsv
+          }
+
+          name=$(output apiName)
+          host=$(output apiHostName)
+
+          # Empty when the last deployment brought up the database alone.
+          if [ -z "$name" ]; then
+            echo "No app tier in $AZURE_RESOURCE_GROUP. Deploy the Bicep with deployApplication true first." >&2
+            exit 1
+          fi
+
+          echo "API_NAME=$name" >> "$GITHUB_ENV"
+          echo "API_HOST=$host" >> "$GITHUB_ENV"
+
+      - name: Deploy
+        run: |
+          az webapp deploy \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name "$API_NAME" \
+            --type zip \
+            --src-path app.zip \
+            --output none
+
+      - name: Wait for health
+        run: |
+          # Migrations run at startup, so the first response can be a few minutes behind the deploy.
+          for attempt in $(seq 1 30); do
+            code=$(curl --silent --output /dev/null --write-out '%{http_code}' "https://$API_HOST/health" || true)
+
+            if [ "$code" = "200" ]; then
+              echo "https://$API_HOST is healthy."
+              exit 0
+            fi
+
+            echo "attempt $attempt: $code"
+            sleep 10
+          done
+
+          echo "https://$API_HOST never answered 200 on /health." >&2
+          exit 1
